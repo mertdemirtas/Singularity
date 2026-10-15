@@ -192,8 +192,15 @@ jobs:
             }, { timeout: 60000 });
             await page.evaluate(() => nativeShell.mainPanel.currentTitle.owner.editor.getControl().setValue('UNSAVED UPDATE RECOVERY 🪐\r\n'));
             await page.screenshot({ path: path.join(artifact, 'before-update.png') });
-            const available = await page.evaluate(() => plainEditorDesktop.updates('check'));
+            const available = await page.evaluate(async () => {
+              let state = await plainEditorDesktop.updates('check');
+              while (state.phase === 'checking') {
+                await new Promise(resolve => setTimeout(resolve, 100)); state = await plainEditorDesktop.updates();
+              }
+              return state;
+            });
             assert.equal(available.phase, 'available', JSON.stringify(available)); assert.equal(available.availableVersion, '0.1.0');
+            await page.click('[data-plain-action="menu"]');
             await page.click('[data-plain-action="settings"]');
             await page.waitForSelector('[data-settings-action="install-update"]', { visible: true });
             await page.click('[data-settings-action="install-update"]');
