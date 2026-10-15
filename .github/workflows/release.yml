@@ -218,8 +218,9 @@ jobs:
               });
               assert(fs.readdirSync(path.join(profile, 'recovery')).some(file => file.endsWith('.json') && fs.readFileSync(path.join(profile, 'recovery', file), 'utf8').includes('UNSAVED UPDATE RECOVERY 🪐')));
               if (process.platform === 'darwin') {
-                const processes = execFileSync('ps', ['-axo', 'command='], { encoding: 'utf8' });
-                assert(processes.split('\n').some(line => line.trim().startsWith(executable)));
+                const processes = execFileSync('ps', ['-axww', '-o', 'command='], { encoding: 'utf8' });
+                const canonical = fs.realpathSync(executable);
+                assert(processes.split('\n').some(line => [executable, canonical].some(name => line.trim().startsWith(name))));
               } else {
                 const processes = execFileSync('powershell.exe', ['-NoProfile', '-Command', 'Get-Process Singularity | Select-Object -ExpandProperty Path'], { encoding: 'utf8' });
                 assert(processes.toLowerCase().includes(executable.toLowerCase()));

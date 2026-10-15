@@ -261,7 +261,15 @@ jobs:
             if (child && child.exitCode === null) {
               if (process.platform === 'win32') {
                 const killed = spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, encoding: 'utf8' });
-                if (killed.error || killed.status !== 0) throw killed.error || new Error('Could not stop isolated desktop process tree: ' + killed.stderr);
+                if (killed.error) throw killed.error;
+                if (killed.status !== 0) {
+                  // A child can exit while taskkill walks the tree. Accept that
+                  // race only when the isolated root process is actually gone.
+                  let alive = true;
+                  try { process.kill(child.pid, 0); } catch (error) { if (error.code === 'ESRCH') alive = false; else throw error; }
+                  if (alive) throw new Error('Could not stop isolated desktop process tree: ' + killed.stderr);
+                  console.log('Isolated desktop exited during process-tree cleanup.');
+                }
               } else { try { process.kill(-child.pid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') throw error; } }
             }
             child?.stdout.destroy(); child?.stderr.destroy(); child?.unref(); log?.end();
