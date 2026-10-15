@@ -14,7 +14,13 @@ The `windows` and `macos` branches contain compatibility work for the existing a
 
 ### Linux
 
-Install Node.js 22 or newer, npm, `python3`, `make`, and a C++ compiler. Then run:
+Use Node.js 24 LTS and npm. On Ubuntu, install the native build dependencies:
+
+```sh
+sudo apt-get install -y python3 build-essential libsecret-1-dev libx11-dev libxkbfile-dev libkrb5-dev
+```
+
+Then run:
 
 ```sh
 npm run setup
@@ -32,7 +38,7 @@ The document tabs and window controls share one title row. Use the **+** beside 
 
 Theme and font family use matching dropdowns in Settings. The font list includes installed monospace fonts and preserves any custom font stack from your JSON settings. Scrolling leaves up to ten extra lines below the document, adapting to its line height.
 
-The Git repository has a baseline `main` branch and an active `development` branch. Continue work on `development`. Local test files in `tests/`, generated builds, dependencies, and downloaded language extensions are excluded from version control.
+Use `development` for shared application work, `windows` for Windows compatibility work, and `macos` for macOS compatibility work. Keep `main` for stable releases. Local test files in `tests/`, generated builds, dependencies, and downloaded language extensions are excluded from version control.
 
 Drag the empty part of the tab row or the title-row space above an open side pane to move the app. Electron 43 handles native edge and corner resizing, including the top-left corner when Files or an extension pane is open. Clicking inside a temporary hover pane pins it before opening its file or action. Files clicks activate the selected registered opener, and delayed focus reports from hidden extension webviews are ignored.
 
