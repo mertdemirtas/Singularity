@@ -226,6 +226,11 @@ async function start() {
     }
   });
   mainWindow.on('closed', () => { mainWindow = undefined; });
+  mainWindow.webContents.on('will-prevent-unload', event => {
+    // Approved closes have already reviewed documents or durably checkpointed
+    // them for an update. The browser's second guard must not trap the restart.
+    if (closeApproved) event.preventDefault();
+  });
   updates = new Updates({ app, prepare: prepareUpdate, cancelPreparation: cancelUpdatePreparation });
   updates.on('state', state => mainWindow?.webContents.send('plain-editor:update-state', state));
   const sendWindowState = () => mainWindow?.webContents.send('plain-editor:window-state', { maximized: mainWindow.isMaximized() });
