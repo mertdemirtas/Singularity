@@ -102,7 +102,9 @@ jobs:
             page.on('pageerror', error => log.write(`PAGE ERROR: ${error.stack}\n`));
             await page.waitForSelector('#plain-header', { timeout: 90000 });
             console.log('Desktop window ready.');
-            assert((await page.title()).includes('Singularity'));
+            // macOS intentionally omits the application name from document titles.
+            await page.waitForSelector('.plain-welcome h1');
+            assert.equal(await page.$eval('.plain-welcome h1', element => element.textContent), 'Singularity');
             assert.equal(await page.evaluate(() => window.plainEditorDesktop.platform), process.platform);
             const fonts = await page.evaluate(() => window.plainEditorDesktop.fontFamilies());
             assert(Array.isArray(fonts) && fonts.length > 0);
@@ -157,9 +159,9 @@ jobs:
             await delay(1000);
             if (child && child.exitCode === null) {
               if (process.platform === 'win32') spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
-              else { try { process.kill(-child.pid, 'SIGTERM'); } catch {} }
+              else { try { process.kill(-child.pid, 'SIGKILL'); } catch {} }
             }
-            child?.stdout.unpipe(log); child?.stderr.unpipe(log); log.end();
+            child?.stdout.destroy(); child?.stderr.destroy(); child?.unref(); log.end();
           });
           JS
       - name: Run native desktop check
