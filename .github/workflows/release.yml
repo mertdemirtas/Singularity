@@ -81,8 +81,10 @@ jobs:
           // Sparkle relaunches through LaunchServices, using the normal profile.
           const profile = process.platform === 'darwin' ? path.join(os.homedir(), 'Library/Application Support/Singularity')
             : process.platform === 'win32' ? path.join(process.env.APPDATA, 'Singularity') : path.join(temp, 'profile');
-          const config = path.join(temp, 'config'), project = path.join(temp, 'Project With Spaces');
-          fs.mkdirSync(config); fs.mkdirSync(project);
+          // Use the normal config location so native installer relaunches use
+          // the same settings, including the disabled recovery preference.
+          const config = path.join(os.homedir(), '.plain-editor'), project = path.join(temp, 'Project With Spaces');
+          fs.mkdirSync(config, { recursive: true }); fs.mkdirSync(project);
           const filename = path.join(project, "example & quote's.py");
           fs.writeFileSync(filename, "print('SINGULARITY_INSTALL_OK')\n");
           fs.writeFileSync(path.join(config, 'settings.json'), JSON.stringify({ 'files.autoSave': 'off',
