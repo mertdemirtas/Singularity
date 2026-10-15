@@ -40,9 +40,10 @@ async function download(url, target, hash) {
     const contents = path.join(root, '.release-runtime/sparkle.app/Contents');
     await fs.mkdir(path.join(contents, 'MacOS'), { recursive: true });
     await fs.mkdir(path.join(contents, 'Frameworks'));
+    await fs.mkdir(path.join(contents, 'Resources'));
     // cp preserves the framework's versioned symlinks.
     run('cp', ['-R', path.join(sdk, 'Sparkle.framework'), path.join(contents, 'Frameworks')]);
-    await fs.copyFile(path.join(sdk, 'LICENSE'), path.join(contents, 'Sparkle-LICENSE'));
+    await fs.copyFile(path.join(sdk, 'LICENSE'), path.join(contents, 'Resources/Sparkle-LICENSE'));
     await fs.writeFile(path.join(contents, 'Info.plist'), `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.mertdemirtas.singularity.updater</string>

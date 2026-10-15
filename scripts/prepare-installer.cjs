@@ -13,6 +13,10 @@ fs.mkdirSync(bin, { recursive: true });
 const node = path.join(bin, process.platform === 'win32' ? 'node.exe' : 'node');
 fs.copyFileSync(process.execPath, node);
 if (process.platform !== 'win32') fs.chmodSync(node, 0o755);
+const nodeLicense = [path.join(path.dirname(process.execPath), 'LICENSE'),
+  path.resolve(path.dirname(process.execPath), '../LICENSE')].find(filename => fs.existsSync(filename));
+if (!nodeLicense) throw new Error('Use an official Node distribution containing its LICENSE when packaging.');
+fs.copyFileSync(nodeLicense, path.join(target, 'Node-LICENSE'));
 
 // Include npm beside Node so extensions and project commands can find it too.
 const candidates = [process.env.npm_execpath,
