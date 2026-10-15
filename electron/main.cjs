@@ -1,7 +1,7 @@
 'use strict';
 
 const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
-const { spawn, execFile } = require('node:child_process');
+const { spawn, execFile, execFileSync } = require('node:child_process');
 const fs = require('node:fs/promises');
 const { existsSync } = require('node:fs');
 const http = require('node:http');
@@ -345,8 +345,14 @@ if (!app.requestSingleInstanceLock()) {
     if (!backend || backend.exitCode !== null) return;
     if (process.platform === 'win32') {
       // Killing only node.exe leaves Windows plugin hosts and terminals alive.
-      const cleanup = spawn('taskkill.exe', ['/PID', String(backend.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
-      cleanup.on('error', () => backend?.kill());
+      // Complete this before Electron exits: the installer must be able to
+      // replace the bundled node.exe, which Windows locks while it is running.
+      try {
+        execFileSync('taskkill.exe', ['/PID', String(backend.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore', timeout: 15000 });
+      } catch (error) {
+        console.error('Singularity backend cleanup:', error.message);
+        backend.kill();
+      }
     } else backend.kill();
   });
 }

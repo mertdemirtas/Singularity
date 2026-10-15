@@ -28,6 +28,10 @@ class Updates extends EventEmitter {
       this.updater.autoInstallOnAppQuit = false;
       this.updater.allowDowngrade = false;
       this.updater.allowPrerelease = false;
+      if (platform === 'win32') {
+        this.updater.disableWebInstaller = true;
+        this.updater.installDirectory = path.dirname(app.getPath('exe'));
+      }
       if (platform === 'linux') this.updater.doInstall = options => {
         try {
           require('./install-deb.cjs').installDeb({ filename: this.updater.downloadedUpdateHelper?.file,

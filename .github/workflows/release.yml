@@ -207,7 +207,7 @@ jobs:
             await page.click('[data-plain-action="settings"]');
             await page.waitForSelector('[data-settings-action="install-update"]', { visible: true });
             await page.click('[data-settings-action="install-update"]');
-            await until(() => JSON.parse(fs.readFileSync(packageFile)).version === '0.1.0', 180000);
+            await until(() => JSON.parse(fs.readFileSync(packageFile)).version === '0.1.0', 240000);
             // Installation must restart the app, preserving its profile and the
             // unsaved buffer despite the recovery preference being disabled.
             await until(() => !browser.connected, 120000); await browser.disconnect();
@@ -242,6 +242,12 @@ jobs:
             console.log(`Installed ${process.platform}/${process.arch}: bundled Node/npm, native modules, fonts, save shortcut, Python terminal, GitHub-format update, restart, and unsaved recovery passed.`);
           })().catch(async error => {
             console.error(error); process.exitCode = 1;
+            if (process.platform === 'win32') {
+              // Capture native installer dialogs even after Electron has quit.
+              const target = path.join(artifact, 'windows-desktop.png').replace(/'/g, "''");
+              const script = "Add-Type -AssemblyName System.Windows.Forms,System.Drawing; $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; $image = New-Object System.Drawing.Bitmap($bounds.Width,$bounds.Height); $graphics = [System.Drawing.Graphics]::FromImage($image); $graphics.CopyFromScreen($bounds.Location,[System.Drawing.Point]::Empty,$bounds.Size); $image.Save('" + target + "'); $graphics.Dispose(); $image.Dispose(); Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'Singularity|node' } | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine | ConvertTo-Json";
+              try { run('powershell.exe', ['-NoProfile', '-Command', script], { timeout: 15000 }); } catch {}
+            }
             if (page) { await page.screenshot({ path: path.join(artifact, 'failure.png') }).catch(() => {}); console.error(await page.evaluate(() => document.body.innerText).catch(() => 'Window closed')); }
           }).finally(async () => {
             if (browser) await browser.disconnect();
@@ -255,7 +261,7 @@ jobs:
           });
           JS
       - name: Verify installation and automatic update
-        timeout-minutes: 12
+        timeout-minutes: 15
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
             xvfb-run -a node "$RUNNER_TEMP/singularity-release-check.cjs"
