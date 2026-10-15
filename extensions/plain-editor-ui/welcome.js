@@ -1,5 +1,6 @@
 'use strict';
 const { BaseWidget } = require('@theia/core/lib/browser/widgets/widget');
+const { primaryModifier } = require('./platform');
 const ID = 'plain-editor.welcome';
 
 function createWelcome(icon) {
@@ -18,9 +19,9 @@ function createWelcome(icon) {
     <header><h1>Singularity</h1><p>A quiet place for notes and code.</p></header>
     <div class="plain-welcome-columns">
       <section><h2>Start</h2>
-        <button type="button" data-welcome-action="open-file">${icon('document')}<span>Open a file</span><kbd>Ctrl+O</kbd></button>
+        <button type="button" data-welcome-action="open-file">${icon('document')}<span>Open a file</span><kbd>${primaryModifier}+O</kbd></button>
         <button type="button" data-welcome-action="open-folder">${icon('folder')}<span>Open a folder</span></button>
-        <button type="button" data-welcome-action="new">${icon('add')}<span>New file</span><kbd>Ctrl+N</kbd></button>
+        <button type="button" data-welcome-action="new">${icon('add')}<span>New file</span><kbd>${primaryModifier}+N</kbd></button>
       </section>
       <section><h2>Recent files</h2><div class="plain-welcome-recent"><p>No recent files yet.</p></div></section>
     </div>

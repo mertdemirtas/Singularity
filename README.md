@@ -6,9 +6,21 @@ Singularity is a small Ubuntu-inspired desktop editor for notes and code. It res
 
 It uses [Eclipse Theia](https://theia-ide.org/) for local files, Monaco editing, the terminal, and VS Code compatible extensions. The extension catalog comes from Open VSX. Compatibility depends on the APIs an extension uses.
 
-## Run on Ubuntu
+## Source installation
 
-Install Node.js 22 or newer, npm, `python3`, `make`, and a C++ compiler. Then run:
+macOS setup: [macOS source-build instructions](docs/macos.md).
+
+The `windows` and `macos` branches contain compatibility work for the existing application. See [branch and native-check policy](docs/branches.md). `main` and `development` are unchanged by this work.
+
+### Linux
+
+Use Node.js 24 LTS and npm. On Ubuntu, install the native build dependencies:
+
+```sh
+sudo apt-get install -y python3 build-essential libsecret-1-dev libx11-dev libxkbfile-dev libkrb5-dev
+```
+
+Then run:
 
 ```sh
 npm run setup
@@ -26,7 +38,7 @@ The document tabs and window controls share one title row. Use the **+** beside 
 
 Theme and font family use matching dropdowns in Settings. The font list includes installed monospace fonts and preserves any custom font stack from your JSON settings. Scrolling leaves up to ten extra lines below the document, adapting to its line height.
 
-The Git repository has a baseline `main` branch and an active `development` branch. Continue work on `development`. Local test files in `tests/`, generated builds, dependencies, and downloaded language extensions are excluded from version control.
+Use `development` for shared application work, `windows` for Windows compatibility work, and `macos` for macOS compatibility work. Keep `main` for stable releases. Local test files in `tests/`, generated builds, dependencies, and downloaded language extensions are excluded from version control.
 
 Drag the empty part of the tab row or the title-row space above an open side pane to move the app. Electron 43 handles native edge and corner resizing, including the top-left corner when Files or an extension pane is open. Clicking inside a temporary hover pane pins it before opening its file or action. Files clicks activate the selected registered opener, and delayed focus reports from hidden extension webviews are ignored.
 
@@ -34,13 +46,13 @@ Files sits at the top of a compact icon rail fixed on the left, with **Source Co
 
 The top-left sidebar toggle hides or shows the entire icon rail and its open pane. This choice persists between launches and is also available under **Settings → Appearance → Show sidebar** (`plainEditor.sidebarVisible`). The neighboring **Back** and **Forward** arrows revisit open document, browser, and development tabs; **Alt+Left** and **Alt+Right** do the same. Side panels and terminals do not add history entries. Closed tabs are removed from history, and each arrow's tooltip names its destination. Editor themes and fonts still apply inside the document area.
 
-Extensions can provide their own run controls. For Python files, **Ctrl+Alt+R** also saves and runs with `python3` in a reusable terminal. Python must be installed on your computer.
+Extensions can provide their own run controls. For Python files, **Ctrl+Alt+R** also saves and runs with `python3` in a reusable terminal. Python 3 must be installed on your computer. The runner locates `py -3`/`python` on Windows and `python3`/`python` on Unix, and uses the appropriate terminal quoting.
 
 The **Open** control inside the Files pane offers **Open File**, **Open Folder**, and recently opened files. The **…** menu has **Reopen Closed Tab** and **Save All**. Use **Ctrl+Shift+T** to reopen the last closed tab; **Clear Recent Files** removes the saved list.
 
-Settings lets you choose a theme, font family, editor font size, auto-save behavior, line wrapping, and the code minimap. The selected font family applies to editor text, tabs, Files, menus, and the app's dialogs and tools. Comma-separated fallback families are preserved. On Linux, font suggestions come from fonts installed on your computer. The minimap also has an **×** button to hide it. Auto save defaults to **When app window loses focus**. The file path row beneath tabs is called **breadcrumbs**; it is hidden by default and can be enabled in **All settings** by searching for `breadcrumbs.enabled`. Use **Open user settings.json** in Settings to edit the same user preferences directly.
+Settings lets you choose a theme, font family, editor font size, auto-save behavior, line wrapping, and the code minimap. The selected font family applies to editor text, tabs, Files, menus, and the app's dialogs and tools. Comma-separated fallback families are preserved. Font choices use the OS font catalog: fontconfig on Linux, Windows installed fonts, and AppKit on macOS. The minimap also has an **×** button to hide it. Auto save defaults to **When app window loses focus**. The file path row beneath tabs is called **breadcrumbs**; it is hidden by default and can be enabled in **All settings** by searching for `breadcrumbs.enabled`. Use **Open user settings.json** in Settings to edit the same user preferences directly.
 
-Shortcuts: **Ctrl+S** save, **Ctrl+Shift+S** Save As, **Ctrl+N** new file, **Ctrl+O** open file, **Ctrl+W** close tab, **Ctrl+Shift+T** reopen closed tab, **Ctrl+B** Files, **Ctrl+J** or **Ctrl+`** Terminal, **Ctrl+Shift+X** Extensions, **Ctrl+,** Settings, and **Ctrl+Q** quit. The corresponding Command/Meta key also works where supported.
+Shortcuts: **Ctrl+S** save, **Ctrl+Shift+S** Save As, **Ctrl+N** new file, **Ctrl+O** open file, **Ctrl+W** close tab, **Ctrl+Shift+T** reopen closed tab, **Ctrl+B** Files, **Ctrl+J** or **Ctrl+`** Terminal, **Ctrl+Shift+X** Extensions, **Ctrl+,** Settings, and **Ctrl+Q** quit. On macOS use Command for these actions; navigation uses Control+Minus and Control+Shift+Minus, preserving Option+Left/Right word movement.
 
 Use the Extensions icon to search Open VSX for a LeetCode extension or other VS Code compatible extensions. To install a local `.vsix`, open the command palette with **F1** and run **Extensions: Install from VSIX...**. Some VS Code extensions may depend on APIs Theia does not implement or on their own sign-in flow.
 
@@ -62,6 +74,6 @@ The app supports the VS Code extension APIs implemented by Theia and keeps exten
 
 In Extensions, filter by **Recommended**, **Installed**, **Enabled**, **Disabled**, or **Built-in**, and sort by download count, rating, or name. The verified icon limits results to verified extensions. Recommendations load from Open VSX when the pane opens, check compatibility, and exclude extensions already installed. A failed request shows a Retry button. The gear on an installed extension opens its declared settings, including switches, choices, numbers, text, and JSON values. Changes save to user settings; Reset restores the default. The **…** beside the gear keeps extension management actions available.
 
-Run `npm test` for the extension discovery and filtering checks, and `npm run check` for dependency checks.
+Run `npm run check` for dependency checks. Local checks under `tests/` remain excluded from Git; the compatibility workflow performs its native desktop checks directly on each OS.
 
 For browser-only development, run `npm start` after setup and open `http://127.0.0.1:3000`.

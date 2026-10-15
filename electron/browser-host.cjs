@@ -43,7 +43,8 @@ function installBrowserHost(getWindow) {
           try { browserUrl(url); } catch { navigation.preventDefault(); }
         });
         wc.on('before-input-event', (keyboard, input) => {
-          if (input.type !== 'keyDown' || !(input.control || input.meta) || input.alt || input.shift) return;
+          const primary = process.platform === 'darwin' ? input.meta && !input.control : input.control && !input.meta;
+          if (input.type !== 'keyDown' || !primary || input.alt || input.shift) return;
           const key = input.key.toLowerCase();
           if (key === 'l' || key === 'w') {
             keyboard.preventDefault();

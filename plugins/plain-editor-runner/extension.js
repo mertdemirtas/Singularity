@@ -2,13 +2,12 @@
 
 const path = require('node:path');
 const vscode = require('vscode');
-
-function shellQuote(value) {
-  return `'${value.replace(/'/g, `'\\''`)}'`;
-}
+const { execFileSync } = require('node:child_process');
+const { findPython, commandLine } = require('./python-command');
 
 async function activate(context) {
   const terminals = new Map();
+  let python;
   context.subscriptions.push(vscode.window.onDidCloseTerminal(closed => {
     for (const [filename, terminal] of terminals) {
       if (terminal === closed) terminals.delete(filename);
@@ -27,16 +26,25 @@ async function activate(context) {
     }
 
     const filename = editor.document.fileName;
+    try { python ||= findPython(execFileSync); }
+    catch (error) { vscode.window.showErrorMessage(error.message); return; }
     let terminal = terminals.get(filename);
     if (!terminal) {
       terminal = vscode.window.createTerminal({
         name: `Python: ${path.basename(filename)}`,
-        cwd: path.dirname(filename)
+        cwd: vscode.Uri.file(path.dirname(filename)),
+        ...(process.platform === 'win32' ? {
+          shellPath: path.join(process.env.SystemRoot || 'C:\\Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe'),
+          shellArgs: ['-NoLogo', '-NoProfile']
+        } : {})
       });
       terminals.set(filename, terminal);
     }
     terminal.show();
-    terminal.sendText(`python3 ${shellQuote(path.basename(filename))}`);
+    // Theia creates the terminal widget before its PTY connection is ready.
+    // Sending immediately can discard the first command on a slower startup.
+    await terminal.processId;
+    terminal.sendText(commandLine(python, filename));
   });
   context.subscriptions.push(disposable);
 

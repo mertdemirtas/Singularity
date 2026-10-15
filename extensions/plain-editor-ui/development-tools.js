@@ -6,6 +6,7 @@ const { CommandContribution } = require('@theia/core/lib/common/command');
 const { PreferenceContribution } = require('@theia/core/lib/common/preferences/preference-schema');
 const { PreferenceService } = require('@theia/core/lib/common/preferences/preference-service');
 const { MessageService } = require('@theia/core/lib/common/message-service');
+const { isWindows } = require('@theia/core/lib/common/os');
 const { WorkspaceService } = require('@theia/workspace/lib/browser/workspace-service');
 const { WorkspaceTrustService } = require('@theia/workspace/lib/browser/workspace-trust-service');
 const { TerminalService } = require('@theia/terminal/lib/browser/base/terminal-service');
@@ -61,7 +62,10 @@ class DevelopmentWidget extends BaseWidget {
             };
             let forwarding = '';
             if (value('localPort') || value('remotePort')) forwarding = ` -L 127.0.0.1:${port('localPort')}:127.0.0.1:${port('remotePort')}`;
-            await controller.launch(`SSH: ${value('host')}`, `ssh -p ${port('port')}${forwarding} -- ${shellQuote(value('host'))}`);
+            // cmd.exe passes POSIX quotes literally; the Windows host has
+            // already been restricted to characters safe in a bare argument.
+            const host = isWindows ? value('host') : shellQuote(value('host'));
+            await controller.launch(`SSH: ${value('host')}`, `ssh -p ${port('port')}${forwarding} -- ${host}`);
             break;
           }
         }
