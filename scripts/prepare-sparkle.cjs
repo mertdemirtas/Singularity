@@ -49,7 +49,9 @@ async function download(url, target, hash) {
 <plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.mertdemirtas.singularity.updater</string>
 <key>CFBundleExecutable</key><string>sparkle</string><key>CFBundleName</key><string>Singularity Updater</string>
 <key>CFBundlePackageType</key><string>APPL</string><key>CFBundleVersion</key><string>${version}</string>
-<key>LSUIElement</key><true/><key>NSHighResolutionCapable</key><true/></dict></plist>`);
+<key>LSUIElement</key><true/><key>NSHighResolutionCapable</key><true/>
+<key>NSPrincipalClass</key><string>NSApplication</string>
+<key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict></dict></plist>`);
     run('clang', ['-fobjc-arc', '-DSPU_OBJC_DIRECT=__attribute__((objc_direct))',
       '-DSPU_OBJC_DIRECT_MEMBERS=__attribute__((objc_direct_members))',
       '-mmacosx-version-min=12.0', '-F', sdk, '-framework', 'Foundation', '-framework', 'AppKit', '-framework', 'Sparkle',

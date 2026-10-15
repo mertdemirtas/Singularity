@@ -65,7 +65,7 @@ class Updates extends EventEmitter {
       else {
         let version;
         try {
-          const result = await this.probeHelper(this.macExecutable, [this.macBundle, '--probe', '--check-immediately',
+          const result = await this.probeHelper(this.macExecutable, [this.macBundle, '--probe',
             '--allow-major-upgrades', '--user-agent-name', 'Singularity'], { timeout: 45000, maxBuffer: 65536 });
           version = result.stdout.trim();
         } catch (error) { if (error.code !== 4) throw new Error(error.stderr?.trim() || error.message); }
