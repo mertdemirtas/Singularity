@@ -21,6 +21,9 @@ if (process.platform === 'darwin') {
 <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
 <enclosure url="https://github.com/mertdemirtas/Singularity/releases/download/v${version}/${archive}" sparkle:edSignature="${signature}" length="${bytes.length}" type="application/octet-stream"/>
 </item></channel></rss>\n`);
+  // macOS uses the architecture-specific Sparkle appcast. The builder's
+  // single-architecture latest-mac.yml would collide when merging both builds.
+  fs.rmSync(path.join(directory, 'latest-mac.yml'), { force: true });
 }
 const artifacts = fs.readdirSync(directory).filter(file => /\.(exe|dmg|zip|deb|yml|xml|blockmap)$/.test(file) && !file.startsWith('builder-'));
 const checksums = artifacts.map(file => `${crypto.createHash('sha256').update(fs.readFileSync(path.join(directory, file))).digest('hex')}  ${file}`);
