@@ -1,0 +1,164 @@
+name: Native platform compatibility
+on:
+  push:
+    branches: [windows, macos]
+  pull_request:
+    branches: [development, main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: compatibility-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux x64, os: ubuntu-24.04 }
+          - { name: Windows x64, os: windows-2022 }
+          - { name: macOS Apple Silicon, os: macos-15 }
+          - { name: macOS Intel, os: macos-15-intel }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.21.0
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Linux native prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libsecret-1-dev libx11-dev libxkbfile-dev libkrb5-dev xvfb
+      - name: Native install and release build
+        run: npm run setup
+      - name: Configure Linux sandbox
+        if: runner.os == 'Linux'
+        run: |
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+      - name: Check Theia versions and native modules
+        run: |
+          npm run check
+          node -e "require('node-pty'); require('keytar'); require('@parcel/watcher'); require('drivelist'); console.log('Native modules loaded on', process.platform, process.arch)"
+      - name: Prepare native desktop check
+        run: |
+          cat > "$RUNNER_TEMP/singularity-native-check.cjs" <<'JS'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const os = require('node:os');
+          const path = require('node:path');
+          const net = require('node:net');
+          const { spawn, spawnSync } = require('node:child_process');
+          const { pathToFileURL } = require('node:url');
+          const puppeteer = require(path.join(process.cwd(), 'node_modules/puppeteer'));
+          const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+          const artifact = path.join(process.env.RUNNER_TEMP, 'singularity-native-check');
+          fs.mkdirSync(artifact, { recursive: true });
+          const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'singularity-native-'));
+          const project = path.join(temp, 'Project With Spaces');
+          const config = path.join(temp, 'config');
+          fs.mkdirSync(project); fs.mkdirSync(config);
+          const filename = path.join(project, 'smoke file.py');
+          fs.writeFileSync(filename, "print('SINGULARITY_PYTHON_OK')\n");
+          fs.writeFileSync(path.join(config, 'settings.json'), JSON.stringify({
+            'security.workspace.trust.trustedFolders': [pathToFileURL(project).href],
+            'telemetry.telemetryLevel': 'off'
+          }));
+          fs.writeFileSync(path.join(config, 'recentworkspace.json'), JSON.stringify({ recentRoots: [pathToFileURL(project).href] }));
+          const log = fs.createWriteStream(path.join(artifact, 'desktop.log'));
+          let child, browser;
+          (async () => {
+            const server = net.createServer();
+            await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+            const port = server.address().port;
+            await new Promise(resolve => server.close(resolve));
+            const flags = [`--user-data-dir=${path.join(temp, 'profile')}`, `--remote-debugging-port=${port}`, '--disable-gpu'];
+            if (process.platform === 'linux') flags.push('--ozone-platform=x11');
+            child = spawn(process.execPath, ['scripts/launch-desktop.cjs', ...flags], {
+              cwd: process.cwd(), env: { ...process.env, THEIA_CONFIG_DIR: config },
+              detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe']
+            });
+            child.stdout.pipe(log, { end: false }); child.stderr.pipe(log, { end: false });
+            const start = Date.now();
+            while (!browser) {
+              if (child.exitCode !== null) throw new Error(`Desktop exited early (${child.exitCode}).`);
+              try { browser = await puppeteer.connect({ browserURL: `http://127.0.0.1:${port}`, defaultViewport: null }); }
+              catch (error) { if (Date.now() - start > 90000) throw error; await delay(500); }
+            }
+            const [page] = await browser.pages();
+            page.on('pageerror', error => log.write(`PAGE ERROR: ${error.stack}\n`));
+            await page.waitForSelector('#plain-header', { timeout: 90000 });
+            assert((await page.title()).includes('Singularity'));
+            assert.equal(await page.evaluate(() => window.plainEditorDesktop.platform), process.platform);
+            const fonts = await page.evaluate(() => window.plainEditorDesktop.fontFamilies());
+            assert(Array.isArray(fonts) && fonts.length > 0);
+            await page.evaluate(() => {
+              const caches = [...theia.container._bindingDictionary._map.values()].flat().map(binding => binding.cache);
+              window.nativeShell = caches.find(value => typeof value?.mainPanel?.onDidChangeCurrent === 'function');
+              window.nativeCommands = caches.find(value => Object.keys(value || {}).includes('_commands'));
+            });
+            const files = '.plain-rail-tools [data-plain-action="files"]';
+            if (await page.$eval(files, element => element.getAttribute('aria-pressed') !== 'true')) await page.click(files);
+            const file = '#files .theia-TreeNode[title$="smoke file.py"] .theia-TreeNodeSegmentGrow';
+            await page.waitForSelector(file, { visible: true });
+            await page.evaluate(async () => { await nativeShell.pendingUpdates; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
+            await page.click(file);
+            await page.waitForFunction(() => nativeShell.mainPanel.currentTitle?.owner.title.label === 'smoke file.py');
+            await page.evaluate(() => {
+              const editor = nativeShell.mainPanel.currentTitle.owner.editor.getControl();
+              editor.setValue("print('SINGULARITY_PYTHON_OK')\n# saved using the native shortcut\n");
+              editor.focus();
+            });
+            const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+            await page.keyboard.down(modifier); await page.keyboard.press('s'); await page.keyboard.up(modifier);
+            const saveStart = Date.now();
+            while (!fs.readFileSync(filename, 'utf8').includes('saved using the native shortcut')) {
+              if (Date.now() - saveStart > 10000) throw new Error('Native save shortcut failed.');
+              await delay(100);
+            }
+            await page.waitForFunction(() => !!nativeCommands._commands['plainEditor.runPython'], { timeout: 60000 });
+            await page.evaluate(() => nativeCommands.executeCommand('plainEditor.runPython'));
+            await page.waitForFunction(() => {
+              const terminal = [...nativeShell.bottomPanel.widgets()].find(widget => widget.title.label.startsWith('Python: '));
+              const buffer = terminal?.getTerminal?.().buffer.active;
+              if (!buffer) return false;
+              const text = Array.from({ length: buffer.length }, (_, index) => buffer.getLine(index)?.translateToString()).join('\n');
+              return text.includes('SINGULARITY_PYTHON_OK');
+            }, { timeout: 60000 });
+            await page.screenshot({ path: path.join(artifact, 'desktop.png') });
+            await page.click('[data-plain-action="window-close"]');
+            console.log(`Native ${process.platform}/${process.arch}: fonts, file path with spaces, save shortcut, and Python terminal passed.`);
+          })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => {
+            if (browser) await browser.disconnect();
+            await delay(1000);
+            if (child && child.exitCode === null) {
+              if (process.platform === 'win32') spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+              else { try { process.kill(-child.pid, 'SIGTERM'); } catch {} }
+            }
+            log.end();
+          });
+          JS
+      - name: Run native desktop check
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a node "$RUNNER_TEMP/singularity-native-check.cjs"
+          else
+            node "$RUNNER_TEMP/singularity-native-check.cjs"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ runner.temp }}/singularity-native-check/
+          if-no-files-found: ignore

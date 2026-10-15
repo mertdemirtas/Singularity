@@ -655,6 +655,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           syncCollapsed();
         }
         document.body.classList.add('plain-editor-ready');
+        document.body.classList.add(`plain-platform-${window.plainEditorDesktop?.platform || 'linux'}`);
         // Re-measure the native 35px tabs after the app applies its 40px title
         // row. Otherwise the editor overlaps the row and hides its separator.
         shell.mainPanel.fit();

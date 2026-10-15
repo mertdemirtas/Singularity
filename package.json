@@ -10,14 +10,14 @@
     "node": ">=22"
   },
   "scripts": {
-    "setup": "bash scripts/setup.sh",
+    "setup": "node scripts/setup.cjs",
     "build": "theia build --mode development && node scripts/apply-theme.cjs",
     "build:release": "theia build && node scripts/apply-theme.cjs",
     "download:languages": "theia download:plugins",
     "rebuild": "theia rebuild",
     "start": "theia start --plugins=local-dir:./plugins",
     "predesktop": "node scripts/configure-sandbox.cjs",
-    "desktop": "electron .",
+    "desktop": "node scripts/launch-desktop.cjs",
     "check": "theia check:theia-version",
     "test": "node --test tests/*.test.cjs",
     "install:desktop": "node scripts/install-desktop.cjs"
@@ -80,5 +80,16 @@
     "@theia/cli": "1.76.0",
     "electron": "^43.7.11"
   },
-  "desktopName": "singularity.desktop"
+  "desktopName": "singularity.desktop",
+  "allowScripts": {
+    "@parcel/watcher": true,
+    "@theia/ffmpeg": true,
+    "@vscode/windows-ca-certs": true,
+    "drivelist": true,
+    "esbuild": true,
+    "fsevents": true,
+    "keytar": true,
+    "msgpackr-extract": true,
+    "node-pty": true
+  }
 }

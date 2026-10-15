@@ -3,6 +3,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('plainEditorDesktop', {
+  platform: process.platform,
   browser(request) { return ipcRenderer.invoke('plain-editor:browser', request); },
   onBrowserState(callback) {
     const listener = (_event, state) => callback(state);

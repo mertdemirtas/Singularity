@@ -95,6 +95,8 @@ html{background:transparent}
 body.plain-editor-ready{overflow:hidden;border-radius:11px;background:transparent!important;clip-path:inset(0 round 11px)}
 body.plain-editor-ready #theia-app-shell{background:var(--theia-editor-background,#fff)}
 body.plain-editor-ready.plain-maximized{border-radius:0;clip-path:none}
+/* Opaque Windows/macOS surfaces use the OS's native corner clipping. */
+body.plain-editor-ready.plain-platform-win32,body.plain-editor-ready.plain-platform-darwin{border-radius:0;clip-path:none}
 #plain-header{grid-template-columns:auto minmax(0,1fr) auto;-webkit-app-region:drag;user-select:none}
 #plain-header .plain-open-control{position:relative;display:flex}
 #plain-header button,#plain-header #plain-menu,#plain-header #plain-open-menu{-webkit-app-region:no-drag}

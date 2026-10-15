@@ -11,12 +11,14 @@ const { fileURLToPath } = require('node:url');
 const { promisify } = require('node:util');
 const StateStore = require('./state-store.cjs');
 const { installBrowserHost } = require('./browser-host.cjs');
+const { installedFonts, windowOptions } = require('./platform.cjs');
 
 const execFileAsync = promisify(execFile);
 
 const root = path.resolve(__dirname, '..');
 app.setName('Singularity');
 if (process.platform === 'linux') app.setDesktopName('singularity.desktop');
+if (process.platform === 'win32') app.setAppUserModelId('com.mertdemirtas.singularity');
 // Keep existing sessions and browser data available after the product rename.
 if (!app.commandLine.hasSwitch('user-data-dir')) {
   const legacyProfile = path.join(app.getPath('appData'), 'Plain Editor');
@@ -37,10 +39,7 @@ const browserHost = installBrowserHost(() => mainWindow);
 
 async function installedMonoFonts() {
   if (!fontFamilies) {
-    fontFamilies = execFileAsync('fc-list', ['-f', '%{family}\n', ':spacing=mono'], { timeout: 4000, maxBuffer: 1024 * 1024 })
-      .then(({ stdout }) => [...new Set(stdout.split(/\r?\n/).flatMap(line => line.split(','))
-        .map(name => name.trim()).filter(name => name && name.length < 80))].sort((a, b) => a.localeCompare(b)))
-      .catch(() => ['monospace', 'DejaVu Sans Mono', 'Ubuntu Mono']);
+    fontFamilies = installedFonts(execFileAsync);
   }
   return fontFamilies;
 }
@@ -146,14 +145,17 @@ async function start() {
   // extension webview's isolated origin and secure-context service workers.
   const origin = `http://localhost:${port}`;
   const backendEntry = path.join(root, 'lib/backend/main.js');
-  const node = process.env.npm_node_execpath || process.execPath;
+  // Theia's native dependencies are built for Node, not Electron's different
+  // module ABI. The launcher supplies the exact Node executable used by npm.
+  const node = process.env.npm_node_execpath || 'node';
   const env = { ...process.env };
-  if (node === process.execPath) env.ELECTRON_RUN_AS_NODE = '1';
+  delete env.ELECTRON_RUN_AS_NODE;
 
   backend = spawn(node, [backendEntry, `--port=${port}`, '--hostname=127.0.0.1', '--plugins=local-dir:./plugins'], {
     cwd: root,
     env,
-    stdio: ['ignore', 'pipe', 'pipe']
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true
   });
   backend.on('error', error => { backendFailure = error; });
   backend.stdout.pipe(process.stdout);
@@ -169,8 +171,7 @@ async function start() {
     minHeight: 460,
     resizable: true,
     frame: false,
-    transparent: true,
-    backgroundColor: '#00000000',
+    ...windowOptions(),
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
@@ -273,5 +274,13 @@ if (!app.requestSingleInstanceLock()) {
   });
   app.whenReady().then(start);
   app.on('window-all-closed', () => app.quit());
-  app.on('will-quit', () => { browserHost.dispose(); backend?.kill(); });
+  app.on('will-quit', () => {
+    browserHost.dispose();
+    if (!backend || backend.exitCode !== null) return;
+    if (process.platform === 'win32') {
+      // Killing only node.exe leaves Windows plugin hosts and terminals alive.
+      const cleanup = spawn('taskkill.exe', ['/PID', String(backend.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+      cleanup.on('error', () => backend?.kill());
+    } else backend.kill();
+  });
 }
