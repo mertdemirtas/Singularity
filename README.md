@@ -8,7 +8,7 @@ It uses [Eclipse Theia](https://theia-ide.org/) for local files, Monaco editing,
 
 ## Source installation
 
-Windows setup: [Windows source-build instructions](docs/windows.md).
+macOS setup: [macOS source-build instructions](docs/macos.md).
 
 The `windows` and `macos` branches contain compatibility work for the existing application. See [branch and native-check policy](docs/branches.md). `main` and `development` are unchanged by this work.
 
@@ -46,7 +46,7 @@ The **Open** control inside the Files pane offers **Open File**, **Open Folder**
 
 Settings lets you choose a theme, font family, editor font size, auto-save behavior, line wrapping, and the code minimap. The selected font family applies to editor text, tabs, Files, menus, and the app's dialogs and tools. Comma-separated fallback families are preserved. Font choices use the OS font catalog: fontconfig on Linux, Windows installed fonts, and AppKit on macOS. The minimap also has an **×** button to hide it. Auto save defaults to **When app window loses focus**. The file path row beneath tabs is called **breadcrumbs**; it is hidden by default and can be enabled in **All settings** by searching for `breadcrumbs.enabled`. Use **Open user settings.json** in Settings to edit the same user preferences directly.
 
-Shortcuts: **Ctrl+S** save, **Ctrl+Shift+S** Save As, **Ctrl+N** new file, **Ctrl+O** open file, **Ctrl+W** close tab, **Ctrl+Shift+T** reopen closed tab, **Ctrl+B** Files, **Ctrl+J** or **Ctrl+`** Terminal, **Ctrl+Shift+X** Extensions, **Ctrl+,** Settings, and **Ctrl+Q** quit. The corresponding Command/Meta key also works where supported.
+Shortcuts: **Ctrl+S** save, **Ctrl+Shift+S** Save As, **Ctrl+N** new file, **Ctrl+O** open file, **Ctrl+W** close tab, **Ctrl+Shift+T** reopen closed tab, **Ctrl+B** Files, **Ctrl+J** or **Ctrl+`** Terminal, **Ctrl+Shift+X** Extensions, **Ctrl+,** Settings, and **Ctrl+Q** quit. On macOS use Command for these actions; navigation uses Control+Minus and Control+Shift+Minus, preserving Option+Left/Right word movement.
 
 Use the Extensions icon to search Open VSX for a LeetCode extension or other VS Code compatible extensions. To install a local `.vsix`, open the command palette with **F1** and run **Extensions: Install from VSIX...**. Some VS Code extensions may depend on APIs Theia does not implement or on their own sign-in flow.
 

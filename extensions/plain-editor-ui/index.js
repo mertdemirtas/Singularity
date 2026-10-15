@@ -30,6 +30,7 @@ const extensionViewOwner = require('./extension-view-owner');
 const createChromeLayout = require('./chrome-layout');
 const { SIDEBAR_VISIBLE } = createChromeLayout;
 const AppHistory = require('./app-history');
+const { primaryPressed, navigationShortcut, navigationDirection } = require('./platform');
 const focusChanged = new Emitter();
 
 const icons = {
@@ -135,8 +136,8 @@ function buildNavigation() {
   navigation.id = 'plain-app-navigation';
   navigation.setAttribute('aria-label', 'App navigation');
   navigation.setAttribute('popover', 'manual');
-  navigation.innerHTML = `${button('Back (Alt+Left)', 'back', 'back', 'plain-icon-only')}
-    ${button('Forward (Alt+Right)', 'forward', 'forward', 'plain-icon-only')}
+  navigation.innerHTML = `${button(`Back (${navigationShortcut(-1)})`, 'back', 'back', 'plain-icon-only')}
+    ${button(`Forward (${navigationShortcut(1)})`, 'forward', 'forward', 'plain-icon-only')}
     ${button('Hide sidebar', 'sidebar', 'toggle-sidebar', 'plain-icon-only')}`;
   document.body.append(navigation);
   navigation.showPopover();
@@ -285,13 +286,13 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
     };
     const syncNavigation = () => {
       if (!navigation) return;
-      for (const [action, direction, key] of [['back', -1, 'Left'], ['forward', 1, 'Right']]) {
+      for (const [action, direction] of [['back', -1], ['forward', 1]]) {
         const control = navigation.querySelector(`[data-plain-action="${action}"]`);
         const index = history.find(direction, historyTarget);
         const target = index === -1 ? undefined : historyTarget(history.entries[index]);
         const label = action === 'back' ? 'Back' : 'Forward';
         control.disabled = navigating || !target;
-        control.title = `${label}${target ? ` to ${target.title.label}` : ''} (Alt+${key})`;
+        control.title = `${label}${target ? ` to ${target.title.label}` : ''} (${navigationShortcut(direction)})`;
         control.setAttribute('aria-label', control.title);
       }
     };
@@ -882,12 +883,13 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         window.addEventListener('keydown', event => {
           if (event.key === 'Escape') closeMenu();
           if (settings.open || document.querySelector('#plain-extension-settings')?.open) return;
-          if (!event.defaultPrevented && event.altKey && !event.ctrlKey && !event.metaKey && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+          const direction = navigationDirection(event);
+          if (direction) {
             event.preventDefault(); event.stopImmediatePropagation();
-            navigate(event.key === 'ArrowLeft' ? -1 : 1);
+            navigate(direction);
             return;
           }
-          if (event.defaultPrevented || event.altKey || !(event.ctrlKey || event.metaKey)) return;
+          if (event.defaultPrevented || event.altKey || !primaryPressed(event)) return;
           const key = event.key.toLowerCase();
           const action = event.shiftKey ? { s: 'save-as', t: 'reopen-closed', x: 'extensions', g: 'source-control' }[key] : ({
             s: 'save', n: 'new', o: 'open-file', w: 'close-tab', b: 'files', j: 'terminal', ',': 'settings', q: 'quit'

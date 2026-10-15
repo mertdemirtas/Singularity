@@ -161,7 +161,16 @@ async function start() {
   backend.stdout.pipe(process.stdout);
   backend.stderr.pipe(process.stderr);
 
-  Menu.setApplicationMenu(null);
+  if (process.platform === 'darwin') {
+    // AppKit uses a native menu for Command shortcuts, clipboard actions,
+    // application hiding, and quitting. Document shortcuts stay in the editor.
+    Menu.setApplicationMenu(Menu.buildFromTemplate([
+      { role: 'appMenu' },
+      { role: 'editMenu' },
+      { label: 'Window', submenu: [{ role: 'minimize' }, { role: 'zoom' }, { type: 'separator' }, { role: 'front' }] }
+    ]));
+    app.dock?.setIcon(path.join(root, 'assets/singularity-icon.png'));
+  } else Menu.setApplicationMenu(null);
   mainWindow = new BrowserWindow({
     title: 'Singularity',
     icon: path.join(root, 'assets', 'singularity-icon.png'),
