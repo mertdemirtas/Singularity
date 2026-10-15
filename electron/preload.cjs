@@ -4,6 +4,15 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('plainEditorDesktop', {
   platform: process.platform,
+  updates(action) { return ipcRenderer.invoke('plain-editor:updates', action); },
+  onUpdateState(callback) {
+    const listener = (_event, state) => callback(state);
+    ipcRenderer.on('plain-editor:update-state', listener);
+    return () => ipcRenderer.removeListener('plain-editor:update-state', listener);
+  },
+  onPrepareUpdate(callback) { ipcRenderer.on('plain-editor:prepare-update', () => callback()); },
+  updatePrepared(error) { ipcRenderer.send('plain-editor:update-prepared', error); },
+  onUpdateUnlock(callback) { ipcRenderer.on('plain-editor:update-unlock', () => callback()); },
   listRecovery() { return ipcRenderer.invoke('plain-editor:recovery-list'); },
   saveRecovery(entry) { return ipcRenderer.invoke('plain-editor:recovery-save', entry); },
   removeRecovery(id) { return ipcRenderer.invoke('plain-editor:recovery-remove', id); },

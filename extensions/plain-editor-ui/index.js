@@ -92,6 +92,7 @@ function buildHeader() {
       <button type="button" role="menuitem" data-plain-action="reopen-closed">Reopen Closed Tab</button>
       <button type="button" role="menuitem" data-plain-action="terminal">Terminal</button>
       <button type="button" role="menuitem" data-plain-action="settings">Settings…</button>
+      ${window.plainEditorDesktop ? '<button type="button" role="menuitem" data-plain-action="check-updates">Check for updates…</button>' : ''}
       <button type="button" role="menuitem" data-plain-action="browser">Browser</button>
       <button type="button" role="menuitem" data-plain-action="source-control">Source Control</button>
       <button type="button" role="menuitem" data-plain-action="development">Development tools…</button>
@@ -167,6 +168,10 @@ function buildSettings() {
         <label class="plain-check"><input id="plain-recovery" data-preference="${RECOVERY_ENABLED}" type="checkbox"><span>Recover unsaved documents after a crash</span></label>
         <p class="plain-recovery-help">Recovery copies stay on this computer. Turning recovery off keeps existing copies.</p>
         <button type="button" data-settings-action="recover">Recover documents</button>
+      </section>
+      <section id="plain-updates"><h3>Singularity</h3><p id="plain-update-status" role="status">Checking version…</p>
+        <button type="button" data-settings-action="check-updates">Check for updates</button>
+        <button type="button" data-settings-action="install-update" hidden>Update and restart</button>
       </section>
     </div>
     <div class="plain-settings-footer"><button type="button" data-settings-action="all">All settings</button><button type="button" data-settings-action="json">Open user settings.json</button></div>`;
@@ -297,6 +302,29 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
     let navigation;
     let chrome;
     let settings;
+    let updateState;
+    let updateDialog;
+    let notifiedVersion;
+    const renderUpdates = state => {
+      if (!state) return;
+      updateState = state;
+      const busy = ['checking', 'downloading', 'preparing', 'installing'].includes(state.phase);
+      if (settings) {
+        settings.querySelector('#plain-update-status').textContent = `Version ${state.version}. ${state.message}`;
+        settings.querySelector('[data-settings-action="check-updates"]').disabled = busy || state.phase === 'disabled';
+        const install = settings.querySelector('[data-settings-action="install-update"]');
+        install.hidden = !state.availableVersion;
+        install.disabled = busy;
+      }
+      if (updateDialog) updateDialog.querySelector('p').textContent = state.message;
+      if (state.phase === 'available' && notifiedVersion !== state.availableVersion) {
+        notifiedVersion = state.availableVersion;
+        messages.info(state.message, 'Update and restart', 'Later').then(choice => {
+          if (choice === 'Update and restart') window.plainEditorDesktop.updates('install');
+        });
+      }
+      if (state.phase === 'error') messages.error(state.message);
+    };
     let availableFonts = ['monospace', 'Ubuntu Mono', 'DejaVu Sans Mono', 'JetBrains Mono', 'Fira Code'];
     let recentFiles = [];
     let focusMode = false;
@@ -495,6 +523,10 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       'save-all': () => execute('core.saveAll'),
       'reopen-closed': () => execute('workbench.action.reopenClosedEditor'),
       'settings-json': () => execute('workbench.action.openSettingsJson'),
+      'check-updates': async () => {
+        actions.settings();
+        renderUpdates(await window.plainEditorDesktop?.updates('check'));
+      },
       'open-folder': openFolder,
       focus: toggleFocus,
       back: () => navigate(-1),
@@ -653,6 +685,30 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         syncFont();
         require('./editor-scroll')(editorManager);
         if (window.plainEditorDesktop) {
+          window.plainEditorDesktop.onUpdateState(renderUpdates);
+          const unlockUpdate = () => updateDialog?.close();
+          window.plainEditorDesktop.onUpdateUnlock(unlockUpdate);
+          window.plainEditorDesktop.onPrepareUpdate(async () => {
+            try {
+              if (!updateDialog) {
+                updateDialog = document.createElement('dialog');
+                updateDialog.id = 'plain-update-progress';
+                updateDialog.innerHTML = '<h2>Updating Singularity</h2><p role="status">Preserving your open documents…</p>';
+                updateDialog.addEventListener('cancel', event => event.preventDefault());
+                document.body.append(updateDialog);
+              }
+              // Keep documents stable until the installer terminates the app.
+              if (settings?.open) settings.close();
+              updateDialog.showModal();
+              await recovery?.flush({ force: true });
+              layoutRestorer.storeLayout(app);
+              await window.plainEditorDesktop.flushState();
+              window.plainEditorDesktop.updatePrepared();
+            } catch (error) {
+              unlockUpdate();
+              window.plainEditorDesktop.updatePrepared(error.message);
+            }
+          });
           window.plainEditorDesktop.onCloseRequested(async () => {
             let approved = false;
             try {
@@ -697,6 +753,8 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         menu = header.querySelector('#plain-menu');
         openMenu = buildOpenMenu();
         settings = buildSettings();
+        if (window.plainEditorDesktop) renderUpdates(await window.plainEditorDesktop.updates());
+        else settings.querySelector('#plain-updates').hidden = true;
         chrome = createChromeLayout({ shell, preferences, header, titlebar, navigation,
           viewRegistry: container.get(PluginViewRegistry),
           plugins: container.get(HostedPluginSupport),
@@ -831,6 +889,8 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           if (action === 'all') { settings.close(); execute('preferences:open'); }
           if (action === 'json') { settings.close(); actions['settings-json'](); }
           if (action === 'recover') { settings.close(); recovery?.recover(); }
+          if (action === 'check-updates') window.plainEditorDesktop?.updates('check').then(renderUpdates);
+          if (action === 'install-update') window.plainEditorDesktop?.updates('install').then(renderUpdates);
         });
         settings.addEventListener('change', event => {
           if (event.target.matches('[data-preference]')) saveSetting(event.target);
@@ -942,7 +1002,9 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           commands.registerCommand({ id: 'plain-editor.recover-documents', label: 'Recover Unsaved Documents', category: 'Singularity' }, {
             execute: () => recovery.recover()
           });
-          await recovery.start();
+          const restoreAfterUpdate = await window.plainEditorDesktop.readState('singularity.restoreAfterUpdate');
+          await recovery.start({ force: restoreAfterUpdate === true });
+          if (restoreAfterUpdate && recovery.restoreSucceeded) await window.plainEditorDesktop.writeState('singularity.restoreAfterUpdate', undefined);
           if ([...shell.mainPanel.widgets()].some(widget => widget.id !== welcome.ID)) {
             [...shell.mainPanel.widgets()].find(widget => widget.id === welcome.ID)?.dispose();
           }

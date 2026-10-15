@@ -8,6 +8,8 @@ It uses [Eclipse Theia](https://theia-ide.org/) for local files, Monaco editing,
 
 ## Source installation
 
+For installation without a development setup, see [installers and automatic updates](docs/releases.md) and [GitHub Releases](https://github.com/mertdemirtas/Singularity/releases/latest).
+
 Platform setup: [Windows](docs/windows.md) · [macOS](docs/macos.md).
 
 The verified Windows and macOS compatibility changes are integrated into `development`. See [branch and native-check policy](docs/branches.md).

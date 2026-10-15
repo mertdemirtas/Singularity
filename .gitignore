@@ -10,3 +10,5 @@ esbuild.mjs
 *.tsbuildinfo
 plugins/vscode.*/
 tests/
+.release-runtime/
+release/

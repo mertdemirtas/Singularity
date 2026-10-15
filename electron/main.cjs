@@ -13,6 +13,8 @@ const StateStore = require('./state-store.cjs');
 const RecoveryStore = require('./recovery-store.cjs');
 const { installBrowserHost } = require('./browser-host.cjs');
 const { installedFonts, windowOptions } = require('./platform.cjs');
+const { backendRuntime } = require('./runtime.cjs');
+const { Updates } = require('./updates.cjs');
 
 const execFileAsync = promisify(execFile);
 
@@ -35,6 +37,31 @@ let recentWrite = Promise.resolve();
 let fontFamilies;
 let desktopState;
 let recovery;
+let updatePreparation;
+let updates;
+function cancelUpdatePreparation() {
+  closeApproved = false;
+  mainWindow?.webContents.send('plain-editor:update-unlock');
+}
+async function prepareUpdate() {
+  if (!frontendReady || !mainWindow) throw new Error('The editor is still starting');
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      updatePreparation = undefined;
+      reject(new Error('Timed out preserving open documents'));
+    }, 30000);
+    updatePreparation = { finish(error) {
+      clearTimeout(timer);
+      updatePreparation = undefined;
+      error ? reject(new Error(error)) : resolve();
+    } };
+    mainWindow.webContents.send('plain-editor:prepare-update');
+  });
+  await recoveryStore().flush();
+  await stateStore().set('singularity.restoreAfterUpdate', true);
+  await stateStore().flush();
+  closeApproved = true;
+}
 const stateStore = () => desktopState ||= new StateStore(path.join(app.getPath('userData'), 'workbench-state.json'));
 const recoveryStore = () => recovery ||= new RecoveryStore(path.join(app.getPath('userData'), 'recovery'));
 const validStateKey = key => typeof key === 'string' && key.length > 0 && key.length < 16384;
@@ -150,9 +177,7 @@ async function start() {
   const backendEntry = path.join(root, 'lib/backend/main.js');
   // Theia's native dependencies are built for Node, not Electron's different
   // module ABI. The launcher supplies the exact Node executable used by npm.
-  const node = process.env.npm_node_execpath || 'node';
-  const env = { ...process.env };
-  delete env.ELECTRON_RUN_AS_NODE;
+  const { node, env } = backendRuntime({ packaged: app.isPackaged, resourcesPath: process.resourcesPath });
 
   backend = spawn(node, [backendEntry, `--port=${port}`, '--hostname=127.0.0.1', '--plugins=local-dir:./plugins'], {
     cwd: root,
@@ -201,6 +226,8 @@ async function start() {
     }
   });
   mainWindow.on('closed', () => { mainWindow = undefined; });
+  updates = new Updates({ app, prepare: prepareUpdate, cancelPreparation: cancelUpdatePreparation });
+  updates.on('state', state => mainWindow?.webContents.send('plain-editor:update-state', state));
   const sendWindowState = () => mainWindow?.webContents.send('plain-editor:window-state', { maximized: mainWindow.isMaximized() });
   mainWindow.on('maximize', sendWindowState);
   mainWindow.on('unmaximize', sendWindowState);
@@ -225,6 +252,15 @@ async function start() {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
+  ipcMain.handle('plain-editor:updates', (event, action) => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('Update access denied.');
+    if (action === 'check') return updates?.check();
+    if (action === 'install') return updates?.install();
+    return updates?.state;
+  });
+  ipcMain.on('plain-editor:update-prepared', (event, error) => {
+    if (event.sender === mainWindow?.webContents) updatePreparation?.finish(typeof error === 'string' ? error : undefined);
+  });
   for (const [action, handler] of [
     ['list', () => recoveryStore().list()],
     ['save', entry => recoveryStore().save(entry)],
@@ -274,7 +310,10 @@ if (!app.requestSingleInstanceLock()) {
   ipcMain.handle('plain-editor:clear-recent-files', event =>
     event.sender === mainWindow?.webContents ? updateRecentFiles(() => []) : []);
   ipcMain.on('plain-editor:frontend-ready', event => {
-    if (event.sender === mainWindow?.webContents) frontendReady = true;
+    if (event.sender === mainWindow?.webContents) {
+      frontendReady = true;
+      updates?.start();
+    }
   });
   ipcMain.on('plain-editor:close-reviewed', (event, approved) => {
     if (event.sender !== mainWindow?.webContents) return;
@@ -296,6 +335,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(start);
   app.on('window-all-closed', () => app.quit());
   app.on('will-quit', () => {
+    updates?.dispose();
     browserHost.dispose();
     if (!backend || backend.exitCode !== null) return;
     if (process.platform === 'win32') {

@@ -1,0 +1,265 @@
+name: Installers and updates
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish a GitHub release after all installer and update checks pass
+        type: boolean
+        default: false
+  push:
+    branches: [development]
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    name: ${{ matrix.name }} installer and update
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux x64, os: ubuntu-24.04, artifact: linux-x64 }
+          - { name: Windows x64, os: windows-2022, artifact: windows-x64 }
+          - { name: macOS Apple Silicon, os: macos-15, artifact: macos-arm64 }
+          - { name: macOS Intel, os: macos-15-intel, artifact: macos-x64 }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.21.0
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Linux prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libsecret-1-dev libx11-dev libxkbfile-dev libkrb5-dev xvfb pkexec
+          # CI has no interactive authentication dialog. Permit only this runner
+          # to invoke the real dpkg through Polkit during the installation check.
+          printf 'polkit.addRule(function(action, subject) { if (action.id === "org.freedesktop.policykit.exec" && action.lookup("program") === "/usr/bin/dpkg" && subject.user === "%s") return polkit.Result.YES; });\n' "$(id -un)" | sudo tee /etc/polkit-1/rules.d/49-singularity-ci.rules >/dev/null
+      - name: Native dependencies and release build
+        run: npm run setup
+      - name: Build installer
+        run: npm run package:release
+      - name: Authenticate macOS updates and generate checksums
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: node scripts/release-metadata.cjs
+      - name: Prepare installed app and update check
+        run: |
+          cat > "$RUNNER_TEMP/singularity-release-check.cjs" <<'JS'
+          'use strict';
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const os = require('node:os');
+          const http = require('node:http');
+          const net = require('node:net');
+          const { spawn, execFileSync } = require('node:child_process');
+          const { pathToFileURL } = require('node:url');
+          const puppeteer = require(path.join(process.cwd(), 'node_modules/puppeteer'));
+          const root = process.cwd(), release = path.join(root, 'release');
+          const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'Singularity Install '));
+          const artifact = path.join(process.env.RUNNER_TEMP, 'release-check');
+          fs.mkdirSync(artifact, { recursive: true });
+          const profile = path.join(temp, 'profile'), config = path.join(temp, 'config'), project = path.join(temp, 'Project With Spaces');
+          fs.mkdirSync(config); fs.mkdirSync(project);
+          const filename = path.join(project, "example & quote's.py");
+          fs.writeFileSync(filename, "print('SINGULARITY_INSTALL_OK')\n");
+          fs.writeFileSync(path.join(config, 'settings.json'), JSON.stringify({ 'files.autoSave': 'off',
+            'plainEditor.recovery.enabled': false, 'security.workspace.trust.trustedFolders': [pathToFileURL(project).href],
+            'telemetry.telemetryLevel': 'off' }));
+          fs.writeFileSync(path.join(config, 'recentworkspace.json'), JSON.stringify({ recentRoots: [pathToFileURL(project).href] }));
+          const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+          const run = (cmd, args, options = {}) => execFileSync(cmd, args, { stdio: 'inherit', ...options });
+          let executable, resources, bundle, browser, page, child, server;
+          const log = fs.createWriteStream(path.join(artifact, 'desktop.log'));
+          const files = fs.readdirSync(release);
+          async function until(check, timeout = 120000) {
+            const start = Date.now();
+            while (!(await check())) { if (Date.now() - start > timeout) throw new Error('Timed out waiting for installed app'); await pause(300); }
+          }
+          (async () => {
+            // Install the actual distributable in a path containing spaces.
+            if (process.platform === 'linux') {
+              run('sudo', ['dpkg', '-i', path.join(release, files.find(file => file.endsWith('.deb')))]);
+              executable = '/opt/Singularity/singularity'; resources = '/opt/Singularity/resources';
+              const sandbox = fs.statSync('/opt/Singularity/chrome-sandbox');
+              assert.equal(sandbox.uid, 0); assert.equal(sandbox.mode & 0o7777, 0o4755);
+            } else if (process.platform === 'win32') {
+              const destination = path.join(temp, 'Installed Editor');
+              run(path.join(release, files.find(file => file.endsWith('.exe'))), ['/S', `/D=${destination}`]);
+              executable = path.join(destination, 'Singularity.exe'); resources = path.join(destination, 'resources');
+              await until(() => fs.existsSync(path.join(resources, 'app/package.json')));
+            } else {
+              const mount = path.join(temp, 'mount');
+              run('hdiutil', ['attach', '-nobrowse', '-mountpoint', mount, path.join(release, files.find(file => file.endsWith('.dmg')))]);
+              bundle = path.join(temp, 'Singularity.app');
+              run('ditto', [path.join(mount, 'Singularity.app'), bundle]); run('hdiutil', ['detach', mount]);
+              executable = path.join(bundle, 'Contents/MacOS/Singularity'); resources = path.join(bundle, 'Contents/Resources');
+              run('codesign', ['--verify', '--deep', '--strict', bundle]);
+            }
+            const runtime = path.join(resources, 'runtime', process.platform === 'win32' ? 'node.exe' : 'bin/node');
+            assert.equal(execFileSync(runtime, ['--version'], { encoding: 'utf8' }).trim(), process.version);
+            const npm = path.join(resources, 'runtime/npm/bin/npm-cli.js');
+            assert.match(execFileSync(runtime, [npm, '--version'], { encoding: 'utf8' }), /^\d+\./);
+            run(runtime, ['-e', "for(const name of ['node-pty','keytar','@parcel/watcher','drivelist']) require(name);console.log('Packaged native modules loaded')"], { cwd: path.join(resources, 'app') });
+            // The previous-version fixture differs only in its version and feed.
+            // Actual signed 0.1.0 archives/installers are the update targets.
+            server = http.createServer((request, response) => {
+              const file = path.basename(decodeURIComponent(request.url.split('?')[0]));
+              const target = path.join(release, file);
+              if (!fs.existsSync(target) || !fs.statSync(target).isFile()) { response.writeHead(404); response.end(); return; }
+              let bytes = fs.readFileSync(target);
+              if (file.endsWith('.xml')) bytes = Buffer.from(bytes.toString().replace(/https:\/\/github.com\/mertdemirtas\/Singularity\/releases\/download\/v[^/]+\//g, `http://127.0.0.1:${server.address().port}/`));
+              response.writeHead(200, { 'Content-Length': bytes.length }); response.end(bytes);
+            });
+            await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+            const feed = `http://127.0.0.1:${server.address().port}/`;
+            const packageFile = path.join(resources, 'app/package.json');
+            const packageJson = JSON.parse(fs.readFileSync(packageFile)); packageJson.version = '0.0.0';
+            function write(filename, text) {
+              if (process.platform === 'linux') {
+                const source = path.join(temp, 'write-temp'); fs.writeFileSync(source, text); run('sudo', ['cp', source, filename]);
+              } else fs.writeFileSync(filename, text);
+            }
+            write(packageFile, JSON.stringify(packageJson));
+            write(path.join(resources, 'app-update.yml'), `provider: generic\nurl: ${feed}\nupdaterCacheDirName: singularity-release-test\n`);
+            if (bundle) {
+              const plist = path.join(bundle, 'Contents/Info.plist');
+              for (const key of ['CFBundleVersion', 'CFBundleShortVersionString']) run('/usr/libexec/PlistBuddy', ['-c', `Set :${key} 0.0.0`, plist]);
+              run('/usr/libexec/PlistBuddy', ['-c', `Set :SUFeedURL ${feed}appcast-${process.arch}.xml`, plist]);
+              run('codesign', ['--force', '--deep', '--sign', '-', bundle]);
+            }
+            const portServer = net.createServer(); await new Promise(resolve => portServer.listen(0, '127.0.0.1', resolve));
+            const port = portServer.address().port; await new Promise(resolve => portServer.close(resolve));
+            const flags = [`--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, '--disable-gpu'];
+            if (process.platform === 'linux') flags.push('--ozone-platform=x11');
+            child = spawn(executable, flags, { cwd: temp, env: { ...process.env, THEIA_CONFIG_DIR: config }, stdio: ['ignore', 'pipe', 'pipe'] });
+            child.stdout.pipe(log, { end: false }); child.stderr.pipe(log, { end: false });
+            async function connect() {
+              await until(async () => {
+                try { browser = await puppeteer.connect({ browserURL: `http://127.0.0.1:${port}`, defaultViewport: null }); return true; }
+                catch { return false; }
+              });
+              const target = await browser.waitForTarget(target => target.type() === 'page', { timeout: 120000 });
+              page = await target.page();
+              await page.waitForSelector('#plain-header', { timeout: 120000 });
+            }
+            await connect();
+            assert.equal((await page.evaluate(() => plainEditorDesktop.updates())).version, '0.0.0');
+            assert((await page.evaluate(() => plainEditorDesktop.fontFamilies())).length > 0);
+            await page.evaluate(() => {
+              const caches = [...theia.container._bindingDictionary._map.values()].flat().map(binding => binding.cache);
+              window.nativeShell = caches.find(value => typeof value?.mainPanel?.onDidChangeCurrent === 'function');
+              window.nativeCommands = caches.find(value => Object.keys(value || {}).includes('_commands'));
+            });
+            const filesButton = '.plain-rail-tools [data-plain-action="files"]';
+            if (await page.$eval(filesButton, element => element.getAttribute('aria-pressed') !== 'true')) await page.click(filesButton);
+            const file = '#files .theia-TreeNode[title$=' + JSON.stringify(path.basename(filename)) + '] .theia-TreeNodeSegmentGrow';
+            await page.waitForSelector(file, { visible: true }); await page.$eval(file, element => element.click());
+            await page.waitForFunction(name => nativeShell.mainPanel.currentTitle?.owner.title.label === name, {}, path.basename(filename));
+            await page.evaluate(() => { const editor = nativeShell.mainPanel.currentTitle.owner.editor.getControl(); editor.setValue("print('SINGULARITY_INSTALL_OK')\n# saved shortcut\n"); editor.focus(); });
+            const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+            await page.keyboard.down(modifier); await page.keyboard.press('s'); await page.keyboard.up(modifier);
+            await until(() => fs.readFileSync(filename, 'utf8').includes('saved shortcut'));
+            await page.waitForFunction(() => !!nativeCommands._commands['plainEditor.runPython'], { timeout: 60000 });
+            await page.evaluate(() => nativeCommands.executeCommand('plainEditor.runPython'));
+            await page.waitForFunction(() => {
+              const buffer = [...nativeShell.bottomPanel.widgets()].find(widget => widget.title.label.startsWith('Python: '))?.getTerminal?.().buffer.active;
+              return buffer && Array.from({ length: buffer.length }, (_, index) => buffer.getLine(index)?.translateToString()).join('\n').includes('SINGULARITY_INSTALL_OK');
+            }, { timeout: 60000 });
+            await page.evaluate(() => nativeShell.mainPanel.currentTitle.owner.editor.getControl().setValue('UNSAVED UPDATE RECOVERY 🪐\r\n'));
+            const available = await page.evaluate(() => plainEditorDesktop.updates('check'));
+            assert.equal(available.phase, 'available', JSON.stringify(available)); assert.equal(available.availableVersion, '0.1.0');
+            await page.click('[data-plain-action="settings"]');
+            await page.waitForSelector('[data-settings-action="install-update"]', { visible: true });
+            await page.click('[data-settings-action="install-update"]');
+            await until(() => JSON.parse(fs.readFileSync(packageFile)).version === '0.1.0', 180000);
+            // Installation must restart the app, preserving its profile and the
+            // unsaved buffer despite the recovery preference being disabled.
+            await until(() => !browser.connected, 120000); await browser.disconnect();
+            await connect();
+            await page.waitForFunction(() => {
+              const caches = [...theia.container._bindingDictionary._map.values()].flat().map(binding => binding.cache);
+              const shell = caches.find(value => typeof value?.mainPanel?.onDidChangeCurrent === 'function');
+              return shell && [...shell.mainPanel.widgets()].some(widget => widget.editor?.document?.getText().includes('UNSAVED UPDATE RECOVERY 🪐'));
+            }, { timeout: 120000 });
+            assert.equal((await page.evaluate(() => plainEditorDesktop.updates())).version, '0.1.0');
+            assert(fs.readFileSync(filename, 'utf8').includes('saved shortcut'));
+            await page.screenshot({ path: path.join(artifact, 'updated.png') });
+            console.log(`Installed ${process.platform}/${process.arch}: bundled Node/npm, native modules, fonts, save shortcut, Python terminal, GitHub-format update, restart, and unsaved recovery passed.`);
+          })().catch(async error => {
+            console.error(error); process.exitCode = 1;
+            if (page) { await page.screenshot({ path: path.join(artifact, 'failure.png') }).catch(() => {}); console.error(await page.evaluate(() => document.body.innerText).catch(() => 'Window closed')); }
+          }).finally(async () => {
+            if (browser?.connected) {
+              const session = await browser.target().createCDPSession().catch(() => undefined);
+              await session?.send('Browser.close').catch(() => {}); await browser.disconnect();
+            }
+            if (child?.exitCode === null) child.kill();
+            child?.stdout.destroy(); child?.stderr.destroy(); child?.unref();
+            server?.closeAllConnections(); server?.close(); log.end();
+          });
+          JS
+      - name: Verify installation and automatic update
+        timeout-minutes: 12
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a node "$RUNNER_TEMP/singularity-release-check.cjs"
+          else
+            node "$RUNNER_TEMP/singularity-release-check.cjs"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: checks-${{ matrix.artifact }}
+          path: ${{ runner.temp }}/release-check
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.artifact }}
+          path: |
+            release/*.deb
+            release/*.exe
+            release/*.dmg
+            release/*.zip
+            release/latest*.yml
+            release/*.blockmap
+            release/appcast-*.xml
+            release/SHA256SUMS-*.txt
+          if-no-files-found: error
+          retention-days: 14
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installer-*
+          merge-multiple: true
+          path: release
+      - name: Publish verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "Tag and package version differ" >&2
+            exit 1
+          fi
+          gh release create "v$version" release/* --target "$GITHUB_SHA" --title "Singularity $version" --notes-file docs/release-notes.md --latest --verify-tag

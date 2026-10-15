@@ -6,6 +6,9 @@
   "productName": "Singularity",
   "main": "electron/main.cjs",
   "license": "MIT",
+  "author": { "name": "Mert Demirtas", "email": "m.demirtas99@icloud.com" },
+  "repository": { "type": "git", "url": "https://github.com/mertdemirtas/Singularity.git" },
+  "homepage": "https://github.com/mertdemirtas/Singularity",
   "engines": {
     "node": ">=22"
   },
@@ -20,7 +23,10 @@
     "desktop": "node scripts/launch-desktop.cjs",
     "check": "theia check:theia-version",
     "test": "node --test tests/*.test.cjs",
-    "install:desktop": "node scripts/install-desktop.cjs"
+    "install:desktop": "node scripts/install-desktop.cjs",
+    "prepare:installer": "node scripts/prepare-installer.cjs",
+    "package:dir": "npm run prepare:installer && electron-builder --config electron-builder.cjs --dir --publish never",
+    "package:release": "npm run prepare:installer && electron-builder --config electron-builder.cjs --publish never"
   },
   "theia": {
     "target": "browser",
@@ -74,11 +80,13 @@
     "@theia/vsx-registry": "1.76.0",
     "@theia/workspace": "1.76.0",
     "drivelist": "12.0.2",
+    "electron-updater": "6.8.9",
     "plain-editor-ui": "file:extensions/plain-editor-ui"
   },
   "devDependencies": {
     "@theia/cli": "1.76.0",
-    "electron": "^43.7.11"
+    "electron": "^43.7.11",
+    "electron-builder": "26.15.3"
   },
   "desktopName": "singularity.desktop",
   "allowScripts": {

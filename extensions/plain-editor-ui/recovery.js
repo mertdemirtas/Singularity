@@ -31,7 +31,7 @@ class RecoveryController {
     return promise;
   }
 
-  async start() {
+  async start({ force = false } = {}) {
     this.manager.onCreated(widget => this.track(widget));
     this.manager.all.forEach(widget => this.track(widget));
     this.preferences.onPreferenceChanged(change => {
@@ -42,7 +42,7 @@ class RecoveryController {
         if (this.enabled && session.document.dirty) this.schedule(session);
       }
     });
-    if (this.enabled) await this.recover();
+    if (this.enabled || force) await this.recover();
   }
 
   track(widget) {
@@ -85,12 +85,12 @@ class RecoveryController {
     }));
   }
 
-  persist(session) {
+  persist(session, force = false) {
     clearTimeout(session.timer);
     session.firstChange = undefined;
     const document = session.document;
     if (!document.dirty) return session.backedUp ? this.clear(session) : Promise.resolve();
-    if (!this.enabled) return Promise.resolve();
+    if (!this.enabled && !force) return Promise.resolve();
     try {
       const snapshot = document.createSnapshot?.(true);
       const text = snapshot ? ('value' in snapshot ? snapshot.value : snapshot.read()) : document.getText();
@@ -105,8 +105,8 @@ class RecoveryController {
     }
   }
 
-  async flush({ closing = false } = {}) {
-    const results = await Promise.allSettled([...this.documents.values()].map(session => this.persist(session)));
+  async flush({ closing = false, force = false } = {}) {
+    const results = await Promise.allSettled([...this.documents.values()].map(session => this.persist(session, force)));
     try {
       await this.api.flushRecovery();
       const failed = results.find(result => result.status === 'rejected');
@@ -126,10 +126,11 @@ class RecoveryController {
   }
 
   async restore() {
+    this.restoreSucceeded = false;
     try {
       const { entries, errors } = await this.api.listRecovery();
       if (errors.length) this.messages.warn('Some recovery copies could not be read and were kept on disk. ' + errors.join('; '));
-      let count = 0;
+      let count = 0, failed = errors.length > 0;
       for (const entry of entries) {
         if ([...this.documents.values()].some(session => session.id === entry.id)) continue;
         const uri = recoveryUri(entry);
@@ -139,10 +140,12 @@ class RecoveryController {
           this.track(widget);
           count++;
         } catch (error) {
+          failed = true;
           this.messages.error(`Could not reopen a recovery copy. It is still kept on disk. ${error.message}`);
         } finally { this.restoring.delete(uri); }
       }
       if (count) this.messages.info(`Recovered ${count} unsaved document${count === 1 ? '' : 's'} in separate tabs. Use Save As to keep them.`);
+      this.restoreSucceeded = !failed;
       return count;
     } catch (error) { this.report(error); return 0; }
   }
