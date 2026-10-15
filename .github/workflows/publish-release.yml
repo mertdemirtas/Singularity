@@ -1,0 +1,71 @@
+name: Publish verified installers
+on:
+  workflow_dispatch:
+    inputs:
+      verified_run_id:
+        description: Successful Installers and updates run for the exact main commit
+        required: true
+        type: string
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERIFIED_RUN_ID: ${{ inputs.verified_run_id }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - name: Require successful native verification of this exact commit
+        run: |
+          [[ "$VERIFIED_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+          gh run view "$VERIFIED_RUN_ID" --json conclusion,headSha,workflowName > "$RUNNER_TEMP/verification.json"
+          node <<'JS'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const { execFileSync } = require('node:child_process');
+          const run = JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'verification.json')));
+          const current = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+          if (run.conclusion !== 'success' || run.workflowName !== 'Installers and updates' || run.headSha !== current) {
+            throw new Error('All native installer/update checks must pass for the exact main commit before publishing.');
+          }
+          JS
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.verified_run_id }}
+          pattern: installer-*
+          merge-multiple: true
+          path: release
+      - name: Verify artifacts and publish
+        run: |
+          node <<'JS'
+          const fs = require('node:fs');
+          const { version } = require('./package.json');
+          if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid stable version');
+          const files = fs.readdirSync('release');
+          for (const extension of ['.exe', '.deb']) {
+            if (!files.some(file => file.endsWith(extension))) throw new Error('Missing installer: ' + extension);
+          }
+          for (const arch of ['arm64', 'x64']) {
+            for (const extension of ['dmg', 'zip']) {
+              if (!files.includes(`Singularity-${version}-mac-${arch}.${extension}`)) throw new Error('Missing macOS installer');
+            }
+            if (!files.includes(`appcast-${arch}.xml`)) throw new Error('Missing macOS update feed');
+          }
+          if (!files.includes('latest.yml') || !files.includes('latest-linux.yml') || files.filter(file => file.startsWith('SHA256SUMS-')).length !== 4) {
+            throw new Error('Missing update metadata or checksums');
+          }
+          JS
+          (cd release && sha256sum -c SHA256SUMS-*.txt)
+          version=$(node -p 'require("./package.json").version')
+          # Creating the tag with the workflow token does not start recursive
+          # builds. These exact installers have already passed all native gates.
+          gh release create "v$version" release/* --target "$(git rev-parse HEAD)" --title "Singularity $version" --notes-file docs/release-notes.md --latest

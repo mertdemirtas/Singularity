@@ -109,7 +109,9 @@ jobs:
               assert.equal(sandbox.uid, 0); assert.equal(sandbox.mode & 0o7777, 0o4755);
             } else if (process.platform === 'win32') {
               const destination = path.join(temp, 'Installed Editor');
-              run(path.join(release, files.find(file => file.endsWith('.exe'))), ['/S', `/D=${destination}`]);
+              // NSIS requires an unquoted final /D argument, even with spaces.
+              run(path.join(release, files.find(file => file.endsWith('.exe'))), ['/S', `/D=${destination}`],
+                { windowsVerbatimArguments: true, timeout: 300000 });
               executable = path.join(destination, 'Singularity.exe'); resources = path.join(destination, 'resources');
               await until(() => fs.existsSync(path.join(resources, 'app/package.json')));
             } else {
@@ -269,6 +271,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.artifact }}
+          compression-level: 0
           path: |
             release/*.deb
             release/*.exe

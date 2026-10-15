@@ -27,7 +27,7 @@ No Apple Developer account is needed for the GitHub feed or Sparkle's cryptograp
 1. Merge shared work and verified platform fixes into `development`. Run `npm run setup` with Node 24.21.0 on the target OS.
 2. Set `package.json` and `package-lock.json` to the next stable semantic version. Update the release notes.
 3. Run **Installers and updates** with publishing disabled. Its native runners build and install the actual packages, exercise editing and the terminal, then update a previous-version fixture to the release artifact and verify restart/recovery.
-4. After verification, fast-forward `main` to the verified commit and push `v<version>`. The tag workflow builds and verifies all four targets, then publishes the release and update metadata together. Published versions are immutable; publish a higher version for fixes.
+4. After verification, fast-forward `main` to the verified commit. Run **Publish verified installers** on `main`, supplying the successful run's numeric ID. It requires successful native checks for that exact commit, verifies all four checksum files, then creates `v<version>` and publishes the tested installers and update metadata together. Alternatively, pushing `v<version>` runs fresh native builds and publishes only after they pass. Published versions are immutable; publish a higher version for fixes.
 
 `npm run package:release` builds the host installer into ignored `release/`. `npm run package:dir` builds an unpacked app for debugging. Packaging preserves the backend's Node ABI and does not rebuild its native modules for Electron.
 
