@@ -1,9 +1,9 @@
 {
-  "name": "plain-editor",
+  "name": "singularity",
   "private": true,
   "version": "0.1.0",
   "description": "A quiet desktop text editor with optional coding tools",
-  "productName": "Plain Editor",
+  "productName": "Singularity",
   "main": "electron/main.cjs",
   "license": "MIT",
   "engines": {
@@ -19,13 +19,14 @@
     "predesktop": "node scripts/configure-sandbox.cjs",
     "desktop": "electron .",
     "check": "theia check:theia-version",
-    "test": "node --test tests/*.test.cjs"
+    "test": "node --test tests/*.test.cjs",
+    "install:desktop": "node scripts/install-desktop.cjs"
   },
   "theia": {
     "target": "browser",
     "frontend": {
       "config": {
-        "applicationName": "Plain Editor",
+        "applicationName": "Singularity",
         "defaultTheme": "light",
         "preferences": {
           "editor.minimap.enabled": false,
@@ -78,5 +79,6 @@
   "devDependencies": {
     "@theia/cli": "1.76.0",
     "electron": "^43.7.11"
-  }
+  },
+  "desktopName": "singularity.desktop"
 }

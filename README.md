@@ -1,6 +1,8 @@
-# Plain Editor
+# Singularity
 
-Plain Editor is a small Ubuntu-inspired desktop editor for notes and code. It restores the tabs and split views from the previous session. With no tabs to restore, a Welcome page offers Open File, Open Folder, New File, recent files, and Settings.
+<img src="assets/app-icon.png" width="96" alt="Singularity icon">
+
+Singularity is a small Ubuntu-inspired desktop editor for notes and code. It restores the tabs and split views from the previous session. With no tabs to restore, a Welcome page offers Open File, Open Folder, New File, recent files, and Settings.
 
 It uses [Eclipse Theia](https://theia-ide.org/) for local files, Monaco editing, the terminal, and VS Code compatible extensions. The extension catalog comes from Open VSX. Compatibility depends on the APIs an extension uses.
 
@@ -12,6 +14,8 @@ Install Node.js 22 or newer, npm, `python3`, `make`, and a C++ compiler. Then ru
 npm run setup
 npm run desktop
 ```
+
+The project folder is `Singularity`. Run `npm run install:desktop` to add the Singularity launcher and supplied app icon to Ubuntu's application menu. Run the installer again if you move the project folder. Existing settings, extensions, and saved tabs remain compatible with the previous app name.
 
 On Ubuntu, Electron's Chromium sandbox helper must be owned by root and have mode `4755`. Before launch, the app checks `node_modules/electron/dist/chrome-sandbox`. If npm has replaced it, the app can link to the existing root-managed Google Chrome helper. If that helper is unavailable, run `sudo chown root:root node_modules/electron/dist/chrome-sandbox` and `sudo chmod 4755 node_modules/electron/dist/chrome-sandbox` before starting the app. Sandboxing stays enabled.
 

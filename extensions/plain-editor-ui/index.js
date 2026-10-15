@@ -116,7 +116,7 @@ function buildTitlebar() {
   // Keep window controls above independently composited editor/extension views.
   titlebar.setAttribute('popover', 'manual');
   titlebar.innerHTML = `<div class="plain-empty-titlebar">
-    <span>Plain Editor</span><div class="plain-empty-actions">
+    <span>Singularity</span><div class="plain-empty-actions">
       ${button('New file', 'add', 'new', 'plain-icon-only')}
       ${button('Focus mode', 'focus', 'focus', 'plain-icon-only')}
     </div></div>
@@ -315,7 +315,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         if (!activated) history.index = previousIndex;
       } catch (error) {
         history.index = previousIndex;
-        console.error('Plain Editor: tab navigation', error);
+        console.error('Singularity: tab navigation', error);
       } finally { navigating = false; syncNavigation(); }
     };
     const panelArea = () => 'left';
@@ -337,7 +337,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         previous?.dispose();
       }
     };
-    const execute = id => commands.executeCommand(id).catch(error => console.error(`Plain Editor: ${id}`, error));
+    const execute = id => commands.executeCommand(id).catch(error => console.error(`Singularity: ${id}`, error));
     const closeMenu = () => {
       if (menu && !menu.hidden) {
         menu.hidden = true;
@@ -424,7 +424,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           sizedAreas.add(area);
         }
       } catch (error) {
-        console.error(`Plain Editor: open ${name}`, error);
+        console.error(`Singularity: open ${name}`, error);
       }
     };
     const openFolder = async () => {
@@ -439,7 +439,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           workspace.open(uri, { preserveWindow: true });
         } else await openSide('files');
       } catch (error) {
-        console.error('Plain Editor: open folder', error);
+        console.error('Singularity: open folder', error);
         messages.error('Could not open the folder.');
       }
     };
@@ -514,7 +514,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         if (window.plainEditorDesktop) window.plainEditorDesktop.fontFamilies().then(families => {
           availableFonts = families;
           syncFontOptions();
-        }).catch(error => console.error('Plain Editor: font list', error));
+        }).catch(error => console.error('Singularity: font list', error));
       },
       quit: () => window.plainEditorDesktop?.requestClose(),
       'clear-recent': async () => {
@@ -561,7 +561,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         recentFiles = await window.plainEditorDesktop.recentFiles();
         renderRecentFiles();
       } catch (error) {
-        console.error('Plain Editor: recent files', error);
+        console.error('Singularity: recent files', error);
       }
     };
     const openRecentFile = async index => {
@@ -571,7 +571,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         await openResource(openers, new URI(entry.uri));
         closePreview();
       } catch (error) {
-        console.error('Plain Editor: open recent file', error);
+        console.error('Singularity: open recent file', error);
         messages.error(`Could not open ${entry.name}.`);
         recentFiles = await window.plainEditorDesktop.removeRecentFile(entry.uri);
         renderRecentFiles();
@@ -612,7 +612,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         if (key === 'workbench.colorTheme') themes.setCurrentTheme(value, false);
         if (key === 'files.autoSave') settings.querySelector('#plain-delay-row').hidden = value !== 'afterDelay';
       } catch (error) {
-        console.error(`Plain Editor: setting ${key}`, error);
+        console.error(`Singularity: setting ${key}`, error);
         syncSettings();
       }
     };
@@ -633,7 +633,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
               }
             } catch (error) {
               approved = false;
-              console.error('Plain Editor could not review the close request', error);
+              console.error('Singularity could not review the close request', error);
               messages.error('Could not save the editor session. Please try closing again.');
             }
             window.plainEditorDesktop.closeReviewed(approved);
@@ -813,7 +813,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
             window.plainEditorDesktop.recordRecentFile(uri.toString()).then(entries => {
               recentFiles = entries;
               if (!openMenu.hidden) renderRecentFiles();
-            }).catch(error => console.error('Plain Editor: record recent file', error));
+            }).catch(error => console.error('Singularity: record recent file', error));
           };
           editorManager.onCurrentEditorChanged(recordCurrentFile);
           shell.onDidChangeCurrentWidget(() => recordCurrentFile(shell.currentWidget));
@@ -827,7 +827,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         closeMinimap.setAttribute('aria-label', 'Hide code minimap');
         closeMinimap.hidden = true;
         closeMinimap.addEventListener('click', () => preferences.set('editor.minimap.enabled', false, PreferenceScope.User)
-          .catch(error => console.error('Plain Editor: hide minimap', error)));
+          .catch(error => console.error('Singularity: hide minimap', error)));
         const updateMinimap = () => {
           const editor = document.querySelector('#theia-main-content-panel .theia-editor:not(.lm-mod-hidden) .monaco-editor');
           const minimap = editor?.querySelector('.minimap');

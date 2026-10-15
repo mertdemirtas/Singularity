@@ -137,7 +137,7 @@ module.exports = function installDevelopmentTools(bind) {
       ['development', 'Development Tools', () => controller.openTools()],
       ['codex', 'Start Codex', () => controller.launchAI('codex')],
       ['claude', 'Start Claude Code', () => controller.launchAI('claude')]
-    ]) registry.registerCommand({ id: `plain-editor.${id}`, category: 'Plain Editor', label }, {
+    ]) registry.registerCommand({ id: `plain-editor.${id}`, category: 'Singularity', label }, {
       execute: () => action().catch(error => messages.error(error.message))
     });
   } }));

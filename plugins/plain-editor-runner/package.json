@@ -1,7 +1,7 @@
 {
   "name": "plain-editor-runner",
-  "displayName": "Plain Editor Python Runner",
-  "description": "Run the current Python file in Plain Editor's terminal.",
+  "displayName": "Singularity Python Runner",
+  "description": "Run the current Python file in Singularity's terminal.",
   "version": "0.1.0",
   "publisher": "plain-editor",
   "engines": {
@@ -17,7 +17,7 @@
       {
         "command": "plainEditor.runPython",
         "title": "Run Python File",
-        "category": "Plain Editor",
+        "category": "Singularity",
         "icon": "$(play)"
       }
     ],

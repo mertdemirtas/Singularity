@@ -113,7 +113,7 @@ class ExtensionCatalog {
       if (candidates.length && !popular.length && failed) throw new Error('Extension details could not be loaded.');
       this.loaded = true;
     } catch (error) {
-      console.error('Plain Editor: popular extensions', error);
+      console.error('Singularity: popular extensions', error);
       this.error = 'Could not load recommendations. Check your connection and try again.';
     } finally {
       this.loading = false;

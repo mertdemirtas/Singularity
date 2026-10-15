@@ -3,6 +3,7 @@
 const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
 const { spawn, execFile } = require('node:child_process');
 const fs = require('node:fs/promises');
+const { existsSync } = require('node:fs');
 const http = require('node:http');
 const net = require('node:net');
 const path = require('node:path');
@@ -14,6 +15,13 @@ const { installBrowserHost } = require('./browser-host.cjs');
 const execFileAsync = promisify(execFile);
 
 const root = path.resolve(__dirname, '..');
+app.setName('Singularity');
+if (process.platform === 'linux') app.setDesktopName('singularity.desktop');
+// Keep existing sessions and browser data available after the product rename.
+if (!app.commandLine.hasSwitch('user-data-dir')) {
+  const legacyProfile = path.join(app.getPath('appData'), 'Plain Editor');
+  if (existsSync(legacyProfile)) app.setPath('userData', legacyProfile);
+}
 let backend;
 let backendFailure;
 let mainWindow;
@@ -78,7 +86,7 @@ function updateRecentFiles(change) {
     await fs.rename(`${target}.tmp`, target);
     return describeRecentFiles(entries);
   });
-  recentWrite = result.catch(error => console.error('Plain Editor: recent files', error));
+  recentWrite = result.catch(error => console.error('Singularity: recent files', error));
   return result;
 }
 
@@ -153,7 +161,8 @@ async function start() {
 
   Menu.setApplicationMenu(null);
   mainWindow = new BrowserWindow({
-    title: 'Plain Editor',
+    title: 'Singularity',
+    icon: path.join(root, 'assets', 'app-icon.png'),
     width: 1120,
     height: 760,
     minWidth: 680,
@@ -195,7 +204,7 @@ async function start() {
     await mainWindow.loadURL(origin);
   } catch (error) {
     const message = String(error.message).replace(/[<&]/g, character => character === '<' ? '&lt;' : '&amp;');
-    const html = `<body style="margin:0;background:#f8f7f5;color:#333;font:16px sans-serif"><div style="height:38px;-webkit-app-region:drag;background:#eee;display:flex;justify-content:space-between;align-items:center;padding-left:12px">Plain Editor<button onclick="window.plainEditorDesktop.windowAction('close')" style="height:38px;width:42px;border:0;background:transparent;font-size:22px;-webkit-app-region:no-drag" aria-label="Close window">×</button></div><main style="padding:24px"><h1>Plain Editor could not start</h1><p>${message}</p><p>Run <code>npm run build:release</code> and try again.</p></main></body>`;
+    const html = `<body style="margin:0;background:#f8f7f5;color:#333;font:16px sans-serif"><div style="height:38px;-webkit-app-region:drag;background:#eee;display:flex;justify-content:space-between;align-items:center;padding-left:12px">Singularity<button onclick="window.plainEditorDesktop.windowAction('close')" style="height:38px;width:42px;border:0;background:transparent;font-size:22px;-webkit-app-region:no-drag" aria-label="Close window">×</button></div><main style="padding:24px"><h1>Singularity could not start</h1><p>${message}</p><p>Run <code>npm run build:release</code> and try again.</p></main></body>`;
     await mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
   }
 }

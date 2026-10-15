@@ -22,7 +22,7 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
   let settingsView;
   settingsButton.onclick = event => {
     event.stopPropagation(); closeExtensionMenu();
-    Promise.resolve(openExtensionSettings(settingsView)).catch(error => console.error('Plain Editor: extension settings', error));
+    Promise.resolve(openExtensionSettings(settingsView)).catch(error => console.error('Singularity: extension settings', error));
   };
   contextMenu.addEventListener('pointerenter', () => clearTimeout(menuTimer));
 
@@ -85,7 +85,7 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
           try {
             const widget = await viewRegistry.openViewContainer(view.id);
             if (widget) await openView(widget.id);
-          } catch (error) { console.error('Plain Editor: open extension view', error); }
+          } catch (error) { console.error('Singularity: open extension view', error); }
         });
         control.addEventListener('contextmenu', event => {
           event.preventDefault(); event.stopPropagation(); clearTimeout(menuTimer);
@@ -168,7 +168,7 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
       refreshIcons(); syncTitlebar();
       if (moveAgain || destination !== area()) {
         moveAgain = false;
-        requestAnimationFrame(() => migrateViews().catch(error => console.error('Plain Editor: sidebar move', error)));
+        requestAnimationFrame(() => migrateViews().catch(error => console.error('Singularity: sidebar move', error)));
       }
     }
   };
@@ -200,12 +200,12 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
     }
     shell.fit(); shell.update();
     closeExtensionMenu();
-    migrateViews().catch(error => console.error('Plain Editor: sidebar layout', error));
+    migrateViews().catch(error => console.error('Singularity: sidebar layout', error));
     schedule();
   };
 
   shell.onDidAddWidget(widget => {
-    if (managed(widget) && !moving) migrateViews().catch(error => console.error('Plain Editor: extension view', error));
+    if (managed(widget) && !moving) migrateViews().catch(error => console.error('Singularity: extension view', error));
     schedule();
   });
   shell.onDidRemoveWidget(schedule);

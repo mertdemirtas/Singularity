@@ -6,7 +6,7 @@ function createWelcome(icon) {
   const widget = new BaseWidget();
   widget.id = ID;
   widget.title.label = 'Welcome';
-  widget.title.caption = 'Welcome to Plain Editor';
+  widget.title.caption = 'Welcome to Singularity';
   widget.title.iconClass = 'codicon codicon-home';
   widget.title.closable = true;
   widget.addClass('plain-welcome');
@@ -15,7 +15,7 @@ function createWelcome(icon) {
   widget.storeState = () => ({});
   widget.restoreState = () => {};
   widget.node.innerHTML = `<div class="plain-welcome-content">
-    <header><h1>Plain Editor</h1><p>A quiet place for notes and code.</p></header>
+    <header><h1>Singularity</h1><p>A quiet place for notes and code.</p></header>
     <div class="plain-welcome-columns">
       <section><h2>Start</h2>
         <button type="button" data-welcome-action="open-file">${icon('document')}<span>Open a file</span><kbd>Ctrl+O</kbd></button>
@@ -48,7 +48,7 @@ function createWelcome(icon) {
       control.append(name, folder);
       list.append(control);
     }
-  }).catch(error => console.error('Plain Editor: welcome recent files', error));
+  }).catch(error => console.error('Singularity: welcome recent files', error));
   return widget;
 }
 module.exports = { ID, createWelcome };

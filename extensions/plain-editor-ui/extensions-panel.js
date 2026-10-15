@@ -51,7 +51,7 @@ class PlainExtensionsSearchBar extends VSXExtensionsSearchBar {
           type: 'button', className: `plain-extension-icon codicon codicon-verified${verified ? ' enabled' : ''}`,
           title: 'Show only verified extensions', 'aria-label': 'Show only verified extensions', 'aria-pressed': verified,
           onClick: () => this.preferenceService.set('extensions.onlyShowVerifiedExtensions', !verified, PreferenceScope.User)
-            .catch(error => console.error('Plain Editor: extension filter', error))
+            .catch(error => console.error('Singularity: extension filter', error))
         })
       ),
       h('div', { className: 'plain-extensions-filters' },
