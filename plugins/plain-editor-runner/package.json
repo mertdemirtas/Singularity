@@ -1,0 +1,33 @@
+{
+  "name": "plain-editor-runner",
+  "displayName": "Plain Editor Python Runner",
+  "description": "Run the current Python file in Plain Editor's terminal.",
+  "version": "0.1.0",
+  "publisher": "plain-editor",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:plainEditor.runPython"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "plainEditor.runPython",
+        "title": "Run Python File",
+        "category": "Plain Editor",
+        "icon": "$(play)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "plainEditor.runPython",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r",
+        "when": "editorTextFocus && editorLangId == python"
+      }
+    ]
+  }
+}

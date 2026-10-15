@@ -1,0 +1,9 @@
+{
+  "name": "plain-editor-ui",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "theiaExtensions": [
+    { "frontend": "index.js" }
+  ]
+}

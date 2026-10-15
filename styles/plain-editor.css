@@ -1,0 +1,307 @@
+/* Quiet document layout; Theia's split panels retain control of pane sizes. */
+body.plain-editor-ready #theia-top-panel{visibility:hidden!important}
+body.plain-editor-ready #theia-statusBar{display:none!important}
+body.plain-editor-ready #theia-left-content-panel.theia-mod-collapsed,body.plain-editor-ready #theia-right-content-panel.theia-mod-collapsed{min-width:0!important;max-width:0!important}
+body.plain-editor-ready .theia-app-sidebar-container{display:none!important}
+body.plain-editor-ready #theia-left-right-split-panel>.lm-SplitPanel-handle{min-width:6px;cursor:col-resize}
+body.plain-editor-ready #theia-bottom-split-panel>.lm-SplitPanel-handle{min-height:6px;cursor:row-resize}
+body.plain-editor-ready #theia-left-content-panel{background:var(--theia-sideBar-background);border-right:1px solid var(--theia-panel-border)}
+body.plain-editor-ready #theia-left-content-panel .theia-sidepanel-toolbar{min-height:38px;padding:0 8px;border-bottom:1px solid var(--theia-panel-border)}
+body.plain-editor-ready #theia-left-content-panel .theia-sidepanel-toolbar .theia-label,body.plain-editor-ready #theia-left-content-panel .theia-view-container-part-header .label{text-transform:none;font-weight:600;letter-spacing:0}
+body.plain-editor-ready #theia-left-content-panel .theia-view-container-part-header{min-height:30px;padding:0 8px}
+body.plain-editor-ready #theia-left-content-panel .theia-TreeNode{box-sizing:border-box;margin:0 5px;width:calc(100% - 10px);border-radius:6px}
+body.plain-editor-ready #theia-left-content-panel .theia-TreeNode:hover{background:var(--theia-list-hoverBackground)}
+body.plain-editor-ready #theia-bottom-content-panel{border-top:1px solid var(--theia-panel-border)}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar.theia-app-main{background:var(--theia-editorGroupHeader-tabsBackground)}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar-tab{border:0;border-right:1px solid var(--theia-panel-border);border-radius:0;margin:4px 4px 4px 0;background:var(--theia-tab-inactiveBackground);color:var(--theia-tab-inactiveForeground)}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar[data-orientation='horizontal'] .lm-TabBar-tab{height:calc(var(--theia-horizontal-toolbar-height) - 8px);line-height:calc(var(--theia-horizontal-toolbar-height) - 8px)}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar-tab.lm-mod-current{--plain-tab-indicator:var(--theia-tab-activeBorderTop,var(--theia-tab-activeBorder,var(--theia-focusBorder)));background:var(--theia-tab-activeBackground);color:var(--theia-tab-activeForeground);box-shadow:inset 0 -2px var(--plain-tab-indicator)}
+/* Move theme-provided active borders to the bottom, including unfocused groups. */
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar-tab.lm-mod-current{border-top:0!important;border-bottom:0!important}
+/* Opening or pinning a preview tab must not switch the label's font face. */
+body.plain-editor-ready #theia-main-content-panel .theia-editor-preview-title-unpinned .lm-TabBar-tabLabel{font-style:normal}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar:not(.theia-tabBar-active) .lm-TabBar-tab.lm-mod-current{box-shadow:inset 0 -2px var(--plain-tab-indicator)}
+/* Themes can inject hover rules after this stylesheet; keep tab colors steady. */
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar .lm-TabBar-tab:hover{background:var(--theia-tab-inactiveBackground);color:var(--theia-tab-inactiveForeground);box-shadow:none}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar:not(.theia-tabBar-active) .lm-TabBar-tab:hover{color:var(--theia-tab-unfocusedInactiveForeground,var(--theia-tab-inactiveForeground))}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar .lm-TabBar-tab.lm-mod-current:hover{background:var(--theia-tab-activeBackground);color:var(--theia-tab-activeForeground);box-shadow:inset 0 -2px var(--plain-tab-indicator)}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar:not(.theia-tabBar-active) .lm-TabBar-tab.lm-mod-current:hover{background:var(--theia-tab-unfocusedActiveBackground,var(--theia-tab-activeBackground));color:var(--theia-tab-unfocusedActiveForeground,var(--theia-tab-activeForeground))}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar .lm-TabBar-tab .lm-TabBar-tabCloseIcon:hover{background:transparent}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar.theia-app-main .lm-TabBar-content-container{flex:1 1 auto;min-width:0}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar.theia-app-main .lm-TabBar-content{width:max-content}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar.theia-app-main .tab-toolbar{margin-left:auto}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar-toolbar{gap:0}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar-toolbar .item{margin:0 4px}
+body.plain-editor-ready .theia-open-editors-widget .open-editors-node-row:not(.group-node):not(.area-node)>.theia-TreeNode{padding-left:6px!important}
+body.plain-editor-ready .theia-open-editors-widget .open-editors-node-row:not(.group-node):not(.area-node) .theia-TreeNodeContent{display:flex;align-items:center;min-width:0}
+body.plain-editor-ready .theia-open-editors-widget .open-editors-node-row:not(.group-node):not(.area-node) .open-editors-prefix-icon-container{order:3;margin-left:auto;min-width:20px}
+body.plain-editor-ready .theia-open-editors-widget .open-editors-node-row:not(.group-node):not(.area-node) .file-icon{order:1}
+body.plain-editor-ready .theia-open-editors-widget .open-editors-node-row:not(.group-node):not(.area-node) .noWrapInfo{order:2;min-width:0}
+body.plain-editor-ready .theia-open-editors-widget .open-editors-node-row:not(.group-node):not(.area-node) .theia-TreeNodeSegment{font-style:normal!important}
+body.plain-editor-ready .monaco-editor .rename-box .rename-label{font-family:var(--theia-ui-font-family)}
+
+#plain-header{box-sizing:border-box;position:absolute;z-index:100;top:0;left:0;right:0;height:40px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 9px;background:var(--theia-sideBar-background,#f5f4f1);border-bottom:1px solid var(--theia-panel-border,#dedbd6);color:var(--theia-foreground,#363432);font:13px/1.2 var(--theia-ui-font-family)}
+#plain-header .plain-header-start,#plain-header .plain-header-end{display:flex;align-items:center;gap:2px;min-width:0}
+#plain-header .plain-header-end{justify-content:flex-end}
+#plain-header .plain-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:30px;height:28px;padding:0 7px;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--theia-foreground,#46433f);font:inherit;cursor:pointer}
+#plain-header .plain-button:hover,#plain-header .plain-button[aria-expanded='true']{background:var(--theia-toolbar-hoverBackground,#e8e6e2)}
+#plain-header .plain-button:focus-visible,#plain-menu button:focus-visible,#plain-settings button:focus-visible,#plain-settings input:focus-visible,#plain-settings select:focus-visible,#plain-minimap-close:focus-visible{outline:2px solid var(--theia-focusBorder,#e95420);outline-offset:1px}
+#plain-header .plain-button svg{flex:none;width:16px;height:16px}
+#plain-header .plain-icon-only{padding:0 6px}
+#plain-header .plain-icon-only span{display:none}
+#plain-menu{position:absolute;top:35px;right:8px;min-width:210px;max-width:min(330px,calc(100vw - 16px));max-height:calc(100vh - 48px);overflow:auto;padding:5px;border:1px solid var(--theia-panel-border,#dcd9d4);border-radius:7px;background:var(--theia-menu-background,var(--theia-sideBar-background,#fff));box-shadow:0 8px 25px #0003}
+#plain-menu[hidden]{display:none}
+#plain-menu button{display:block;width:100%;padding:8px 10px;border:0;border-radius:4px;background:transparent;color:var(--theia-menu-foreground,var(--theia-foreground,#343330));text-align:left;font:inherit;cursor:pointer}
+#plain-menu button:hover{background:var(--theia-menu-selectionBackground,#e8e6e2)}
+#plain-menu button[hidden]{display:none}
+#plain-menu .plain-menu-label{margin:5px 7px 2px;padding-top:7px;border-top:1px solid var(--theia-panel-border,#ddd);color:var(--theia-descriptionForeground,#777);font-size:11px;font-weight:600}
+#plain-menu .plain-menu-empty{padding:6px 10px;color:var(--theia-descriptionForeground,#777);font-size:12px}
+#plain-menu .plain-recent-file span,#plain-menu .plain-recent-file small{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#plain-menu .plain-recent-file small{margin-top:2px;color:var(--theia-descriptionForeground,#777);font-size:11px}
+#plain-open-menu .plain-menu-label{margin:5px 7px 2px;padding-top:7px;border-top:1px solid var(--theia-panel-border,#ddd);color:var(--theia-descriptionForeground,#777);font-size:11px;font-weight:600}
+#plain-open-menu .plain-menu-empty{padding:6px 10px;color:var(--theia-descriptionForeground,#777);font-size:12px}
+#plain-open-menu .plain-recent-file span,#plain-open-menu .plain-recent-file small{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#plain-open-menu .plain-recent-file small{margin-top:2px;color:var(--theia-descriptionForeground,#777);font-size:11px}
+
+#plain-settings{box-sizing:border-box;width:min(460px,calc(100vw - 32px));max-height:min(680px,calc(100vh - 32px));padding:0;border:1px solid var(--theia-panel-border,#dedbd6);border-radius:11px;background:var(--theia-editorWidget-background,var(--theia-sideBar-background,#fff));color:var(--theia-foreground,#333);box-shadow:0 18px 60px #0004;font:13px/1.35 var(--theia-ui-font-family)}
+#plain-settings::backdrop{background:#0007}
+#plain-settings .plain-settings-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--theia-panel-border,#ddd)}
+#plain-settings h2{margin:0;font-size:16px;font-weight:600}
+#plain-settings .plain-settings-header button{width:26px;height:26px;padding:0;border:0;border-radius:4px;background:transparent;color:inherit;font:22px/1 var(--theia-ui-font-family);cursor:pointer}
+#plain-settings .plain-settings-header button:hover{background:var(--theia-toolbar-hoverBackground,#eee)}
+#plain-settings .plain-settings-body{max-height:calc(100vh - 170px);overflow:auto;padding:3px 16px 15px}
+#plain-settings section{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);align-items:center;gap:10px 16px;padding:15px 0;border-bottom:1px solid var(--theia-panel-border,#ddd)}
+#plain-settings section:last-child{border-bottom:0}
+#plain-settings h3{grid-column:1/-1;margin:0 0 3px;font-size:13px;font-weight:700}
+#plain-settings label{cursor:pointer}
+#plain-settings select,#plain-settings input:not([type=checkbox]){box-sizing:border-box;min-width:0;width:100%;height:30px;padding:4px 8px;border:1px solid var(--theia-input-border,var(--theia-panel-border,#ccc));border-radius:5px;background:var(--theia-input-background,#fff);color:var(--theia-input-foreground,#222);font:inherit}
+#plain-settings .plain-number-field{display:flex;align-items:center;gap:6px}
+#plain-settings .plain-number-field input{flex:1}
+#plain-settings .plain-number-field span{width:18px;color:var(--theia-descriptionForeground,#777)}
+#plain-settings #plain-delay-row{display:contents}
+#plain-settings #plain-delay-row[hidden]{display:none}
+#plain-settings .plain-check{grid-column:1/-1;display:flex;align-items:center;gap:9px}
+#plain-settings .plain-check input{accent-color:var(--theia-focusBorder,#e95420)}
+#plain-settings .plain-settings-footer{display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid var(--theia-panel-border,#ddd)}
+#plain-settings .plain-settings-footer button{padding:6px 9px;border:1px solid var(--theia-panel-border,#ccc);border-radius:5px;background:var(--theia-button-secondaryBackground,var(--theia-input-background,#fff));color:var(--theia-button-secondaryForeground,var(--theia-foreground,#333));font:inherit;cursor:pointer}
+#plain-settings .plain-settings-footer button:hover{filter:brightness(.95)}
+#plain-minimap-close{position:absolute;top:6px;right:6px;z-index:40;width:22px;height:22px;padding:0;border:1px solid var(--theia-panel-border,#ccc);border-radius:4px;background:var(--theia-editor-background,#fff);color:var(--theia-editor-foreground,#333);font:19px/19px var(--theia-ui-font-family);cursor:pointer}
+#plain-minimap-close[hidden]{display:none}
+#plain-minimap-close:hover{background:var(--theia-toolbar-hoverBackground,#eee)}
+@media(max-width:670px){#plain-header{grid-template-columns:auto minmax(0,1fr) auto;padding:0 5px}#plain-header .plain-header-start,#plain-header .plain-header-end{gap:0}#plain-header .plain-button{padding:0 6px}#plain-header .plain-button span{display:none}#plain-settings section{grid-template-columns:1fr;gap:6px}#plain-settings h3{margin-bottom:5px}}
+
+/* The custom title row replaces Electron's native title bar. */
+html{background:transparent}
+body.plain-editor-ready{overflow:hidden;border-radius:11px;background:transparent!important;clip-path:inset(0 round 11px)}
+body.plain-editor-ready #theia-app-shell{background:var(--theia-editor-background,#fff)}
+body.plain-editor-ready.plain-maximized{border-radius:0;clip-path:none}
+#plain-header{grid-template-columns:auto minmax(0,1fr) auto;-webkit-app-region:drag;user-select:none}
+#plain-header .plain-open-control{position:relative;display:flex}
+#plain-header button,#plain-header #plain-menu,#plain-header #plain-open-menu{-webkit-app-region:no-drag}
+#plain-header .plain-header-drag{height:100%;min-width:12px}
+#plain-header .plain-window-controls{display:flex;align-items:center;gap:0;margin-left:7px;padding-left:5px;border-left:1px solid var(--theia-panel-border,#dedbd6)}
+#plain-header .plain-window-controls .plain-button{width:30px;min-width:30px;padding:0}
+#plain-header .plain-window-close:hover{background:#d83b3b;color:#fff}
+#plain-header [data-plain-action='focus'][aria-pressed='true']{background:var(--theia-toolbar-hoverBackground,#e8e6e2)}
+#plain-menu{right:106px}
+#plain-open-menu{position:absolute;z-index:101;top:33px;left:0;min-width:170px;padding:5px;border:1px solid var(--theia-panel-border,#dcd9d4);border-radius:7px;background:var(--theia-menu-background,var(--theia-sideBar-background,#fff));box-shadow:0 8px 25px #0003}
+#plain-open-menu[hidden]{display:none}
+#plain-open-menu{font:13px/1.4 var(--theia-ui-font-family)}
+#plain-open-menu button{display:block;width:100%;padding:8px 10px;border:0;border-radius:4px;background:transparent;color:var(--theia-menu-foreground,var(--theia-foreground,#343330));text-align:left;font:inherit;cursor:pointer}
+#plain-open-menu button:hover{background:var(--theia-menu-selectionBackground,#e8e6e2)}
+#plain-open-menu button:focus-visible{outline:2px solid var(--theia-focusBorder,#e95420);outline-offset:1px}
+#theia-left-content-panel .plain-side-close{flex:none;width:24px;height:24px;margin-right:6px;padding:0;border:0;border-radius:4px;background:transparent;color:var(--theia-foreground,#444);font:20px/20px var(--theia-ui-font-family);cursor:pointer}
+#theia-left-content-panel .plain-side-close:hover{background:var(--theia-toolbar-hoverBackground,#e8e6e2)}
+#theia-left-content-panel .plain-side-close:focus-visible{outline:2px solid var(--theia-focusBorder,#e95420)}
+body.plain-editor-ready.plain-side-peek #theia-left-content-panel{z-index:5;border-radius:0 10px 10px 0;box-shadow:3px 0 16px #0002}
+body.plain-focus-mode #plain-header .plain-header-start,body.plain-focus-mode #plain-header .plain-hide-in-focus,body.plain-focus-mode #plain-menu,body.plain-focus-mode #plain-open-menu{display:none!important}
+@media(max-width:900px){#plain-header .plain-secondary span,#plain-header .plain-hide-in-focus span{display:none}}
+
+/* One document/title row and a fixed left action rail. */
+body.plain-editor-ready #theia-app-shell{box-sizing:border-box}
+body.plain-editor-ready #theia-main-content-panel{--theia-private-horizontal-tab-height:40px;--theia-horizontal-toolbar-height:40px}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar.theia-app-main{background:var(--plain-title-background);min-height:40px}
+body.plain-editor-ready #theia-main-content-panel .theia-tabBar-tab-row{-webkit-app-region:drag}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar-content-container{-webkit-app-region:drag}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar-tab,body.plain-editor-ready #theia-main-content-panel .lm-TabBar-toolbar,body.plain-editor-ready #theia-main-content-panel .lm-TabBar-toolbar *,body.plain-editor-ready #theia-main-content-panel .theia-tabBar-open-tabs{-webkit-app-region:no-drag}
+body.plain-editor-ready #theia-main-content-panel .plain-window-tabs .theia-tabBar-tab-row{box-sizing:border-box;padding-right:var(--plain-window-space)}
+#plain-header{position:fixed;inset:40px auto 0 0;width:48px;height:auto;display:flex;flex-direction:column;gap:8px;align-items:center;padding:12px 6px 8px;border:0;-webkit-app-region:no-drag;user-select:none;overflow:visible}
+#plain-header .plain-rail-tools,#plain-header .plain-rail-footer{display:flex;flex-direction:column;align-items:center;gap:4px}
+#plain-header .plain-rail-footer{margin-top:auto}
+#plain-header .plain-open-control{position:static;display:flex}
+.plain-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:30px;height:30px;padding:0 6px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--theia-foreground);font:13px var(--theia-ui-font-family);cursor:pointer}
+.plain-button:hover,.plain-button[aria-expanded='true'],.plain-button[aria-pressed='true']{background:var(--theia-toolbar-hoverBackground)}
+.plain-button svg{width:18px;height:18px;flex:none}
+.plain-icon-only span:not(.plain-view-icon){display:none}
+.plain-button[hidden]{display:none!important}
+.plain-button:focus-visible{outline:2px solid var(--theia-focusBorder);outline-offset:1px}
+#plain-header .plain-button{width:34px;height:34px;padding:0;border-radius:8px}
+#plain-header .plain-button svg{width:18px;height:18px}
+#plain-titlebar{position:fixed;z-index:110;top:0;left:48px;right:0;height:40px;display:flex;align-items:center;pointer-events:none;color:var(--theia-foreground);font:13px var(--theia-ui-font-family);transform:translateZ(0);isolation:isolate}
+#plain-titlebar[popover]{bottom:auto;width:auto;margin:0;padding:0;border:0;background:transparent;overflow:visible}
+#plain-titlebar::backdrop{display:none}
+#plain-titlebar .plain-window-controls{position:relative;z-index:1;transform:translateZ(0);display:flex;align-items:center;justify-content:center;flex:none;width:104px;height:40px;margin-left:auto;background:var(--theia-sideBar-background);pointer-events:auto;-webkit-app-region:no-drag}
+#plain-titlebar .plain-window-controls .plain-button{width:32px;height:30px;min-width:32px;padding:0;border-radius:6px}
+/* CSS glyphs keep native window controls painted when an extension takes focus. */
+#plain-titlebar .plain-window-controls svg{display:none}
+#plain-titlebar [data-plain-action='minimize']::before{content:'';width:12px;border-top:1px solid currentColor}
+#plain-titlebar [data-plain-action='maximize']::before{content:'';width:10px;height:10px;border:1px solid currentColor;box-sizing:border-box}
+#plain-titlebar [data-plain-action='window-close']::before{content:'×';font:20px/1 var(--theia-ui-font-family)}
+#plain-titlebar .plain-window-close:hover{background:#d83b3b;color:#fff}
+.plain-empty-titlebar{display:flex;align-items:center;justify-content:space-between;flex:1;min-width:0;height:40px;padding:0 12px;background:var(--theia-sideBar-background);pointer-events:auto;-webkit-app-region:drag}
+.plain-empty-titlebar[hidden]{display:none}
+.plain-empty-titlebar>span{color:var(--theia-descriptionForeground);font-size:12px}
+.plain-empty-actions{display:flex;align-items:center;gap:3px;-webkit-app-region:no-drag}
+.plain-view-icon{display:inline-block!important;flex:none;width:20px;height:20px;line-height:20px;font-size:20px}
+.plain-view-icon.theia-plugin-view-container{background-color:currentColor}
+#plain-extension-views-menu,#plain-open-menu,#plain-menu{position:fixed;z-index:200;top:auto;left:auto;right:auto;min-width:220px;max-width:min(300px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;padding:6px;border:1px solid var(--theia-panel-border);border-radius:10px;background:var(--theia-menu-background,var(--theia-sideBar-background));box-shadow:0 10px 32px #0003}
+#plain-extension-views-menu[hidden]{display:none}
+#plain-extension-views-menu .plain-menu-empty{padding:10px;color:var(--theia-descriptionForeground);font:12px/1.4 var(--theia-ui-font-family)}
+#plain-extension-views-menu{width:max-content;min-width:160px;max-width:min(360px,calc(100vw - 16px))}
+#plain-extension-views-menu .plain-extension-view-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:6px;background:transparent;color:var(--theia-foreground);text-align:left;font:13px var(--theia-ui-font-family);cursor:pointer}
+#plain-extension-views-menu .plain-extension-view-item>span:last-child{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#plain-extension-views-menu .plain-extension-view-item:hover{background:var(--theia-list-hoverBackground)}
+#plain-extension-views-menu .plain-extension-view-item:focus-visible{outline:2px solid var(--theia-focusBorder);outline-offset:-2px}
+#plain-extension-view-context{position:fixed;z-index:210;min-width:190px;padding:6px;border:1px solid var(--theia-panel-border);border-radius:8px;background:var(--theia-menu-background,var(--theia-sideBar-background));box-shadow:0 8px 24px #0003}
+#plain-extension-view-context[hidden]{display:none}
+#plain-extension-view-context button{display:block;width:100%;padding:8px 10px;border:0;border-radius:5px;background:transparent;color:var(--theia-foreground);font:13px var(--theia-ui-font-family);text-align:left;cursor:pointer}
+#plain-extension-view-context button:hover{background:var(--theia-list-hoverBackground)}
+.plain-browser{display:flex;flex-direction:column;background:var(--theia-editor-background);color:var(--theia-foreground);font:13px var(--theia-ui-font-family)}
+.plain-browser-toolbar{display:flex;align-items:center;gap:5px;padding:8px;border-bottom:1px solid var(--theia-panel-border);flex:none}
+.plain-browser-toolbar input{flex:1;min-width:0;height:30px;padding:0 10px;border:1px solid var(--theia-panel-border);border-radius:7px;background:var(--theia-input-background);color:var(--theia-input-foreground);font:inherit}
+.plain-browser-toolbar button,.plain-development button{padding:7px 10px;border:1px solid var(--theia-panel-border);border-radius:7px;background:var(--theia-sideBar-background);color:var(--theia-foreground);font:inherit;cursor:pointer}
+.plain-browser-toolbar button:hover,.plain-development button:hover{background:var(--theia-toolbar-hoverBackground)}
+.plain-browser-toolbar button:disabled{opacity:.45;cursor:default}
+.plain-browser-status{flex:none;min-height:18px;padding:4px 10px;font-size:11px;color:var(--theia-descriptionForeground);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.plain-browser-content{position:relative;flex:1;min-height:0}
+.plain-browser-placeholder{padding:36px;color:var(--theia-descriptionForeground)}
+.plain-browser-placeholder[hidden]{display:none}
+.plain-development{overflow:auto;background:var(--theia-editor-background);color:var(--theia-foreground);font:13px/1.5 var(--theia-ui-font-family)}
+.plain-development-content{max-width:680px;margin:auto;padding:28px}
+.plain-development h1{font-size:25px;font-weight:500;margin:0}
+.plain-development h2{font-size:16px;font-weight:500;margin:0 0 12px}
+.plain-development p,.plain-development small{color:var(--theia-descriptionForeground)}
+.plain-development section{padding:20px 0;border-top:1px solid var(--theia-panel-border)}
+.plain-development label{display:flex;flex-direction:column;gap:5px;margin:10px 0}
+.plain-development input{box-sizing:border-box;width:100%;height:32px;padding:5px 9px;border:1px solid var(--theia-panel-border);border-radius:6px;background:var(--theia-input-background);color:var(--theia-input-foreground);font:inherit}
+.plain-tool-actions{display:flex;gap:8px;flex-wrap:wrap}
+.plain-tool-ports{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.plain-development small{display:block;margin-top:10px;font-size:11px}
+.plain-tool-status{color:var(--theia-errorForeground);min-height:20px}
+body.plain-focus-mode #plain-header{display:none!important}
+body.plain-focus-mode #plain-app-navigation{display:none!important}
+body.plain-focus-mode .plain-empty-titlebar{padding-left:12px}
+body.plain-focus-mode #plain-titlebar{top:0;left:0;right:0}
+body.plain-editor-ready #plain-titlebar.plain-compact-titlebar{left:auto;width:var(--plain-window-space)}
+.plain-files-open{flex:none;width:28px;height:28px;padding:0}
+.plain-welcome{overflow:auto;background:var(--theia-editor-background);color:var(--theia-foreground);font:13px/1.5 var(--theia-ui-font-family)}
+.plain-welcome-content{box-sizing:border-box;max-width:760px;margin:0 auto;padding:clamp(32px,8vh,80px) clamp(24px,6vw,64px)}
+.plain-welcome header h1{margin:0;font-size:32px;font-weight:500;letter-spacing:-.8px}
+.plain-welcome header p{margin:8px 0 36px;color:var(--theia-descriptionForeground);font-size:15px}
+.plain-welcome-columns{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+.plain-welcome h2{margin:0 0 12px;font-size:16px;font-weight:500}
+.plain-welcome section button{display:flex;align-items:center;gap:10px;width:100%;min-height:38px;padding:8px;border:0;border-radius:7px;background:transparent;color:var(--theia-textLink-foreground,var(--theia-foreground));text-align:left;font:inherit;cursor:pointer}
+.plain-welcome button:hover{background:var(--theia-list-hoverBackground)}
+.plain-welcome button:focus-visible{outline:2px solid var(--theia-focusBorder)}
+.plain-welcome section svg{width:18px;height:18px;flex:none}
+.plain-welcome kbd{margin-left:auto;color:var(--theia-descriptionForeground);font:11px var(--theia-ui-font-family);white-space:nowrap}
+.plain-welcome-recent>p{margin:8px;color:var(--theia-descriptionForeground)}
+.plain-welcome-recent button{flex-direction:column;align-items:flex-start!important;gap:0!important}
+.plain-welcome-recent span,.plain-welcome-recent small{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plain-welcome-recent small{color:var(--theia-descriptionForeground);font-size:11px}
+.plain-welcome footer{display:flex;align-items:center;gap:12px;margin-top:40px;color:var(--theia-descriptionForeground);font-size:12px}
+.plain-welcome footer button{padding:6px 8px;border:1px solid var(--theia-panel-border);border-radius:6px;background:transparent;color:var(--theia-foreground);font:inherit;cursor:pointer}
+@media(max-width:600px){.plain-welcome-columns{grid-template-columns:1fr;gap:24px}.plain-welcome header p{margin-bottom:24px}}
+
+/* Compact app chrome uses the selected theme's activity-bar and tab-row colors. */
+body.plain-editor-ready{--plain-chrome-background:var(--theia-activityBar-background,var(--theia-sideBar-background));--plain-chrome-hover:var(--theia-toolbar-hoverBackground,var(--theia-list-hoverBackground));--plain-chrome-selected:var(--theia-toolbar-hoverBackground,var(--theia-list-inactiveSelectionBackground));--plain-chrome-muted:var(--theia-activityBar-inactiveForeground,var(--theia-descriptionForeground));--plain-chrome-foreground:var(--theia-activityBar-foreground,var(--theia-foreground));--plain-title-background:var(--theia-editorGroupHeader-tabsBackground,var(--theia-titleBar-activeBackground));--plain-title-foreground:var(--theia-titleBar-activeForeground,var(--theia-foreground))}
+body.plain-editor-ready #theia-app-shell{background:var(--theia-editor-background)}
+#plain-header{background:var(--plain-chrome-background);color:var(--plain-chrome-muted)}
+#plain-header .plain-rail-tools,#plain-header .plain-rail-footer{gap:9px}
+#plain-header .plain-rail-footer{padding-top:12px;border-top:1px solid var(--theia-activityBar-border,var(--theia-panel-border))}
+#plain-header .plain-button{width:36px;height:36px;border-radius:12px;color:var(--plain-chrome-muted);transition:background .12s,color .12s}
+#plain-header .plain-button:hover,#plain-header .plain-button[aria-expanded='true']{background:var(--plain-chrome-hover);color:var(--plain-chrome-foreground)}
+#plain-header .plain-button[aria-pressed='true']{background:var(--plain-chrome-selected);color:var(--plain-chrome-foreground)}
+#plain-app-navigation{position:fixed;top:0;left:0;bottom:auto;right:auto;box-sizing:border-box;width:112px;height:40px;margin:0;padding:4px 5px;display:flex;gap:3px;align-items:center;border:0;background:var(--plain-title-background);color:var(--plain-title-foreground);overflow:visible;-webkit-app-region:drag}
+#plain-app-navigation::backdrop{display:none}
+#plain-app-navigation .plain-button{width:32px;min-width:32px;height:30px;padding:0;border-radius:8px;color:inherit;-webkit-app-region:no-drag}
+#plain-app-navigation .plain-button svg{width:16px;height:16px}
+#plain-app-navigation .plain-button:hover:not(:disabled){background:var(--plain-chrome-hover);color:var(--plain-title-foreground)}
+#plain-app-navigation .plain-button:disabled{opacity:.3;cursor:default}
+#plain-titlebar{color:var(--plain-title-foreground)}
+#plain-titlebar .plain-window-controls,.plain-empty-titlebar{background:var(--plain-title-background)}
+#plain-titlebar .plain-button{color:var(--plain-title-foreground)}
+#plain-titlebar .plain-button:hover{background:var(--plain-chrome-hover);color:var(--plain-title-foreground)}
+.plain-empty-titlebar{padding-left:124px}
+.plain-empty-titlebar>span{color:var(--plain-title-foreground)}
+body.plain-editor-ready #theia-main-content-panel .theia-tabBar-tab-row{box-sizing:border-box;padding-left:var(--plain-history-space,0px)}
+body.plain-editor-ready #theia-left-content-panel,body.plain-editor-ready #theia-right-content-panel{background:var(--theia-sideBar-background)}
+body.plain-sidebar-hidden #plain-header{display:none!important}
+body.plain-sidebar-hidden #plain-titlebar{top:0;left:0;right:0}
+body:not(.plain-maximized) #plain-app-navigation{border-top-left-radius:11px}
+body:not(.plain-maximized) #plain-titlebar .plain-window-controls{border-top-right-radius:11px}
+body.plain-editor-ready #theia-right-content-panel{background:var(--theia-sideBar-background);border-left:1px solid var(--theia-panel-border)}
+body.plain-editor-ready #theia-right-content-panel .theia-sidepanel-toolbar{min-height:38px;padding:0 8px;border-bottom:1px solid var(--theia-panel-border)}
+#theia-right-content-panel .plain-side-close{flex:none;width:24px;height:24px;margin-right:6px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--theia-foreground);font:20px/20px var(--theia-ui-font-family);cursor:pointer}
+#theia-right-content-panel .plain-side-close:hover{background:var(--theia-toolbar-hoverBackground)}
+body.plain-side-peek #theia-right-content-panel{z-index:5;border-radius:10px 0 0 10px;box-shadow:-3px 0 16px #0002}
+body.plain-editor-ready #theia-right-content-panel .theia-view-container-part-header .label{text-transform:none;font-weight:600;letter-spacing:0}
+body.plain-editor-ready #theia-right-content-panel .theia-view-container-part-header{min-height:30px;padding:0 8px}
+body.plain-editor-ready #theia-right-content-panel .theia-TreeNode{box-sizing:border-box;margin:0 5px;width:calc(100% - 10px);border-radius:6px}
+body.plain-editor-ready #theia-right-content-panel .theia-TreeNode:hover{background:var(--theia-list-hoverBackground)}
+
+/* One separator color for bars and panes, with black when the theme omits it. */
+body.plain-editor-ready{--plain-divider-color:var(--theia-panel-border,#000)}
+#plain-header{box-shadow:inset -1px 0 var(--plain-divider-color)}
+#plain-app-navigation,#plain-titlebar .plain-window-controls,.plain-empty-titlebar{box-shadow:inset 0 -1px var(--plain-divider-color)}
+#plain-header .plain-rail-footer{border-top-color:var(--plain-divider-color)}
+/* The native TabBar overlay paints the single separator at y=39. */
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar.theia-app-main{border-bottom:0;box-shadow:none}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar.theia-app-centers::after{height:1px;bottom:0;background:var(--plain-divider-color);z-index:10}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar-tab{border-right-color:var(--plain-divider-color)}
+body.plain-editor-ready #theia-left-content-panel{border-right-color:var(--plain-divider-color)}
+body.plain-editor-ready #theia-right-content-panel{border-left-color:var(--plain-divider-color)}
+.plain-pane-title-drag{position:absolute;top:0;left:0;right:0;height:40px;box-shadow:inset 0 -1px var(--plain-divider-color);background:var(--plain-title-background);z-index:1;user-select:none;-webkit-app-region:drag}
+body.plain-editor-ready #theia-left-content-panel .theia-sidepanel-toolbar,body.plain-editor-ready #theia-right-content-panel .theia-sidepanel-toolbar,.plain-browser-toolbar{border-bottom-color:var(--plain-divider-color)}
+body.plain-editor-ready #theia-bottom-content-panel{border-top-color:var(--plain-divider-color)}
+body.plain-editor-ready #theia-main-content-panel .lm-DockPanel-handle{border-color:var(--plain-divider-color)}
+
+/* Extension discovery and per-extension preferences. */
+.theia-vsx-extensions-search-bar{padding:10px!important;min-height:94px;flex:none!important}
+.theia-vsx-extensions-search-bar:has(.plain-extensions-note){min-height:116px}
+.plain-extensions-controls{width:100%;min-width:0;flex:none;font-family:var(--theia-ui-font-family)}
+.plain-extensions-controls .vsx-search-container{border-radius:6px;min-height:30px}
+.plain-extensions-controls .theia-input{min-width:0;padding:6px 8px}
+.plain-extensions-filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px;margin-top:8px}
+.plain-extensions-filters select{width:100%;min-width:0;height:29px;padding:3px 5px;border:1px solid var(--theia-panel-border);border-radius:5px;background:var(--theia-input-background);color:var(--theia-input-foreground);font:12px var(--theia-ui-font-family)}
+.plain-extensions-note{display:flex;align-items:center;gap:6px;margin-top:8px;color:var(--theia-descriptionForeground);font-size:11px;line-height:1.4}
+.plain-extensions-note button{flex:none;padding:3px 6px;border:1px solid var(--theia-panel-border);border-radius:4px;background:transparent;color:var(--theia-foreground);cursor:pointer}
+.plain-extensions-empty{padding:14px 10px;color:var(--theia-descriptionForeground);font:12px/1.5 var(--theia-ui-font-family)}
+.plain-extension-actions{display:flex;align-items:center;gap:2px}
+.plain-extension-icon{display:inline-flex;align-items:center;justify-content:center;flex:none;width:25px;height:25px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--theia-foreground);cursor:pointer}
+.plain-extension-icon:hover,.plain-extension-icon.enabled{background:var(--theia-toolbar-hoverBackground)}
+.plain-extension-icon:focus-visible,.plain-extensions-filters select:focus-visible{outline:2px solid var(--theia-focusBorder);outline-offset:1px}
+.plain-extensions-controls .plain-extension-icon{margin-right:3px}
+#plain-extension-settings{box-sizing:border-box;width:min(600px,calc(100vw - 32px));max-height:calc(100vh - 32px);padding:0;border:1px solid var(--theia-panel-border);border-radius:11px;background:var(--theia-editorWidget-background,var(--theia-sideBar-background));color:var(--theia-foreground);box-shadow:0 18px 60px #0004;font:13px/1.45 var(--theia-ui-font-family)}
+#plain-extension-settings::backdrop{background:#0007}
+.plain-extension-settings-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid var(--theia-panel-border)}
+.plain-extension-settings-header h2{margin:0;font-size:16px;font-weight:600}
+.plain-extension-settings-header button{flex:none;width:26px;height:26px;padding:0;border:0;border-radius:4px;background:transparent;color:inherit;font:22px/1 var(--theia-ui-font-family);cursor:pointer}
+.plain-extension-settings-description{margin:12px 16px 8px;color:var(--theia-descriptionForeground)}
+#plain-extension-settings .plain-extension-settings-search{width:calc(100% - 32px);margin:0 16px 8px}
+.plain-extension-settings-body{max-height:calc(100vh - 200px);overflow:auto;padding:0 16px 14px}
+.plain-extension-setting{padding:14px 0;border-bottom:1px solid var(--theia-panel-border)}
+.plain-extension-setting:last-of-type{border-bottom:0}
+.plain-extension-setting[hidden]{display:none}
+.plain-extension-setting label{display:block;font-weight:600;overflow-wrap:anywhere}
+.plain-extension-setting p{margin:5px 0 9px;color:var(--theia-descriptionForeground);white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+.plain-extension-setting-controls{display:flex;align-items:flex-start;gap:8px}
+#plain-extension-settings input:not([type=checkbox]),#plain-extension-settings select,#plain-extension-settings textarea{box-sizing:border-box;flex:1;min-width:0;max-width:100%;padding:6px 8px;border:1px solid var(--theia-input-border,var(--theia-panel-border));border-radius:5px;background:var(--theia-input-background);color:var(--theia-input-foreground);font:inherit}
+#plain-extension-settings textarea{font:12px/1.5 var(--theia-code-font-family);resize:vertical}
+#plain-extension-settings input[type=checkbox]{margin-top:7px;accent-color:var(--theia-focusBorder)}
+.plain-extension-setting-controls button{flex:none;padding:5px 8px;border:1px solid var(--theia-panel-border);border-radius:5px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.plain-extension-setting-controls input[type=checkbox]+button{margin-left:auto}
+.plain-extension-setting-status{display:block;margin-top:5px;color:var(--theia-descriptionForeground);font-size:11px}
+.plain-extension-setting-status.error{color:var(--theia-errorForeground)}
+#plain-extension-settings button:hover{background:var(--theia-toolbar-hoverBackground)}
+#plain-extension-settings input:focus-visible,#plain-extension-settings select:focus-visible,#plain-extension-settings textarea:focus-visible,#plain-extension-settings button:focus-visible{outline:2px solid var(--theia-focusBorder);outline-offset:1px}

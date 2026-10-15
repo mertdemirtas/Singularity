@@ -1,0 +1,268 @@
+'use strict';
+
+const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
+const { spawn, execFile } = require('node:child_process');
+const fs = require('node:fs/promises');
+const http = require('node:http');
+const net = require('node:net');
+const path = require('node:path');
+const { fileURLToPath } = require('node:url');
+const { promisify } = require('node:util');
+const StateStore = require('./state-store.cjs');
+const { installBrowserHost } = require('./browser-host.cjs');
+
+const execFileAsync = promisify(execFile);
+
+const root = path.resolve(__dirname, '..');
+let backend;
+let backendFailure;
+let mainWindow;
+let closeApproved = false;
+let closePending = false;
+let frontendReady = false;
+let recentWrite = Promise.resolve();
+let fontFamilies;
+let desktopState;
+const stateStore = () => desktopState ||= new StateStore(path.join(app.getPath('userData'), 'workbench-state.json'));
+const validStateKey = key => typeof key === 'string' && key.length > 0 && key.length < 16384;
+const browserHost = installBrowserHost(() => mainWindow);
+
+async function installedMonoFonts() {
+  if (!fontFamilies) {
+    fontFamilies = execFileAsync('fc-list', ['-f', '%{family}\n', ':spacing=mono'], { timeout: 4000, maxBuffer: 1024 * 1024 })
+      .then(({ stdout }) => [...new Set(stdout.split(/\r?\n/).flatMap(line => line.split(','))
+        .map(name => name.trim()).filter(name => name && name.length < 80))].sort((a, b) => a.localeCompare(b)))
+      .catch(() => ['monospace', 'DejaVu Sans Mono', 'Ubuntu Mono']);
+  }
+  return fontFamilies;
+}
+
+function validFileUri(value) {
+  if (typeof value !== 'string' || value.length > 8192) return undefined;
+  try {
+    const uri = new URL(value);
+    if (uri.protocol !== 'file:' || uri.host || uri.search || uri.hash) return undefined;
+    fileURLToPath(uri);
+    return uri.href;
+  } catch {
+    return undefined;
+  }
+}
+
+function recentFilePath() {
+  return path.join(app.getPath('userData'), 'recent-files.json');
+}
+
+async function readRecentFiles() {
+  try {
+    const entries = JSON.parse(await fs.readFile(recentFilePath(), 'utf8'));
+    return Array.isArray(entries) ? [...new Set(entries.map(validFileUri).filter(Boolean))].slice(0, 12) : [];
+  } catch {
+    return [];
+  }
+}
+
+function describeRecentFiles(entries) {
+  return entries.map(uri => {
+    const filename = fileURLToPath(uri);
+    return { uri, name: path.basename(filename), folder: path.dirname(filename) };
+  });
+}
+
+function updateRecentFiles(change) {
+  const result = recentWrite.then(async () => {
+    const entries = change(await readRecentFiles()).slice(0, 12);
+    const target = recentFilePath();
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(`${target}.tmp`, JSON.stringify(entries, null, 2) + '\n');
+    await fs.rename(`${target}.tmp`, target);
+    return describeRecentFiles(entries);
+  });
+  recentWrite = result.catch(error => console.error('Plain Editor: recent files', error));
+  return result;
+}
+
+function unusedPort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+function isReady(port) {
+  return new Promise(resolve => {
+    const request = http.get(`http://127.0.0.1:${port}/`, response => {
+      response.resume();
+      resolve(response.statusCode < 500);
+    });
+    request.on('error', () => resolve(false));
+    request.setTimeout(1000, () => {
+      request.destroy();
+      resolve(false);
+    });
+  });
+}
+
+async function waitForBackend(port) {
+  for (let attempt = 0; attempt < 180; attempt++) {
+    if (backendFailure) throw backendFailure;
+    if (backend.exitCode !== null) {
+      throw new Error(`Editor backend exited with code ${backend.exitCode}.`);
+    }
+    if (await isReady(port)) return;
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  throw new Error('Editor backend did not start within 45 seconds.');
+}
+
+function openExternally(url, localOrigin) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return true;
+  }
+  if (parsed.origin === localOrigin) return false;
+  if (parsed.protocol === 'http:' || parsed.protocol === 'https:') shell.openExternal(url);
+  return true;
+}
+
+async function start() {
+  const port = await unusedPort();
+  // Chromium cannot navigate to UUID.webview.127.0.0.1 (a hostname ending
+  // in an IPv4 address). *.localhost resolves to loopback and preserves each
+  // extension webview's isolated origin and secure-context service workers.
+  const origin = `http://localhost:${port}`;
+  const backendEntry = path.join(root, 'lib/backend/main.js');
+  const node = process.env.npm_node_execpath || process.execPath;
+  const env = { ...process.env };
+  if (node === process.execPath) env.ELECTRON_RUN_AS_NODE = '1';
+
+  backend = spawn(node, [backendEntry, `--port=${port}`, '--hostname=127.0.0.1', '--plugins=local-dir:./plugins'], {
+    cwd: root,
+    env,
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  backend.on('error', error => { backendFailure = error; });
+  backend.stdout.pipe(process.stdout);
+  backend.stderr.pipe(process.stderr);
+
+  Menu.setApplicationMenu(null);
+  mainWindow = new BrowserWindow({
+    title: 'Plain Editor',
+    width: 1120,
+    height: 760,
+    minWidth: 680,
+    minHeight: 460,
+    resizable: true,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    autoHideMenuBar: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      preload: path.join(__dirname, 'preload.cjs')
+    }
+  });
+  mainWindow.on('close', event => {
+    if (closeApproved || !frontendReady || mainWindow.webContents.isDestroyed()) return;
+    event.preventDefault();
+    if (!closePending) {
+      closePending = true;
+      mainWindow.webContents.send('plain-editor:close-requested');
+    }
+  });
+  mainWindow.on('closed', () => { mainWindow = undefined; });
+  const sendWindowState = () => mainWindow?.webContents.send('plain-editor:window-state', { maximized: mainWindow.isMaximized() });
+  mainWindow.on('maximize', sendWindowState);
+  mainWindow.on('unmaximize', sendWindowState);
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    openExternally(url, origin);
+    return { action: 'deny' };
+  });
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (openExternally(url, origin)) event.preventDefault();
+  });
+
+  try {
+    await waitForBackend(port);
+    await mainWindow.loadURL(origin);
+  } catch (error) {
+    const message = String(error.message).replace(/[<&]/g, character => character === '<' ? '&lt;' : '&amp;');
+    const html = `<body style="margin:0;background:#f8f7f5;color:#333;font:16px sans-serif"><div style="height:38px;-webkit-app-region:drag;background:#eee;display:flex;justify-content:space-between;align-items:center;padding-left:12px">Plain Editor<button onclick="window.plainEditorDesktop.windowAction('close')" style="height:38px;width:42px;border:0;background:transparent;font-size:22px;-webkit-app-region:no-drag" aria-label="Close window">×</button></div><main style="padding:24px"><h1>Plain Editor could not start</h1><p>${message}</p><p>Run <code>npm run build:release</code> and try again.</p></main></body>`;
+    await mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  }
+}
+
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  ipcMain.handle('plain-editor:read-state', (event, key) => {
+    if (event.sender !== mainWindow?.webContents || !validStateKey(key)) return undefined;
+    return stateStore().get(key);
+  });
+  ipcMain.handle('plain-editor:write-state', (event, key, value) => {
+    if (event.sender !== mainWindow?.webContents || !validStateKey(key)) return undefined;
+    return stateStore().set(key, value);
+  });
+  ipcMain.handle('plain-editor:flush-state', event => {
+    if (event.sender !== mainWindow?.webContents) return undefined;
+    return stateStore().flush();
+  });
+  ipcMain.handle('plain-editor:recent-files', async event => {
+    if (event.sender !== mainWindow?.webContents) return [];
+    await recentWrite;
+    return describeRecentFiles(await readRecentFiles());
+  });
+  ipcMain.handle('plain-editor:font-families', event =>
+    event.sender === mainWindow?.webContents ? installedMonoFonts() : []);
+  ipcMain.handle('plain-editor:window-state', event =>
+    event.sender === mainWindow?.webContents ? { maximized: mainWindow.isMaximized() } : { maximized: false });
+  ipcMain.on('plain-editor:window-action', (event, action) => {
+    if (event.sender !== mainWindow?.webContents) return;
+    if (action === 'minimize') mainWindow.minimize();
+    if (action === 'maximize') mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize();
+    if (action === 'close') mainWindow.close();
+  });
+  ipcMain.handle('plain-editor:record-recent-file', (event, value) => {
+    if (event.sender !== mainWindow?.webContents) return [];
+    const uri = validFileUri(value);
+    return uri ? updateRecentFiles(entries => [uri, ...entries.filter(entry => entry !== uri)]) : [];
+  });
+  ipcMain.handle('plain-editor:remove-recent-file', (event, value) => {
+    if (event.sender !== mainWindow?.webContents) return [];
+    const uri = validFileUri(value);
+    return uri ? updateRecentFiles(entries => entries.filter(entry => entry !== uri)) : [];
+  });
+  ipcMain.handle('plain-editor:clear-recent-files', event =>
+    event.sender === mainWindow?.webContents ? updateRecentFiles(() => []) : []);
+  ipcMain.on('plain-editor:frontend-ready', event => {
+    if (event.sender === mainWindow?.webContents) frontendReady = true;
+  });
+  ipcMain.on('plain-editor:close-reviewed', (event, approved) => {
+    if (event.sender !== mainWindow?.webContents) return;
+    closePending = false;
+    if (approved === true) {
+      closeApproved = true;
+      mainWindow.close();
+    }
+  });
+  ipcMain.on('plain-editor:request-close', event => {
+    if (event.sender === mainWindow?.webContents) mainWindow.close();
+  });
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+  app.whenReady().then(start);
+  app.on('window-all-closed', () => app.quit());
+  app.on('will-quit', () => { browserHost.dispose(); backend?.kill(); });
+}

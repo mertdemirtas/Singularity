@@ -1,0 +1,42 @@
+'use strict';
+const fs = require('node:fs/promises');
+const path = require('node:path');
+
+class StateStore {
+  constructor(filename) {
+    this.filename = filename;
+    this.pending = Promise.resolve();
+    this.loaded = undefined;
+  }
+  load() {
+    if (!this.loaded) this.loaded = fs.readFile(this.filename, 'utf8')
+      .then(text => Object.assign(Object.create(null), JSON.parse(text)))
+      .catch(error => {
+        if (error.code === 'ENOENT') return Object.create(null);
+        throw error;
+      });
+    return this.loaded;
+  }
+  async get(key) {
+    await this.pending;
+    return (await this.load())[key];
+  }
+  set(key, value) {
+    const update = this.pending.then(async () => {
+      const data = await this.load();
+      if (value === undefined) delete data[key];
+      else data[key] = value;
+      await fs.mkdir(path.dirname(this.filename), { recursive: true });
+      await fs.writeFile(`${this.filename}.tmp`, JSON.stringify(data));
+      await fs.rename(`${this.filename}.tmp`, this.filename);
+      this.failure = undefined;
+    });
+    this.pending = update.catch(error => { this.failure = error; });
+    return update;
+  }
+  async flush() {
+    await this.pending;
+    if (this.failure) throw this.failure;
+  }
+}
+module.exports = StateStore;

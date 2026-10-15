@@ -1,0 +1,12 @@
+node_modules/
+lib/
+src-gen/
+dist/
+gen-*.js
+gen-*.mjs
+gen-*.json
+esbuild.mjs
+*.log
+*.tsbuildinfo
+plugins/vscode.*/
+tests/

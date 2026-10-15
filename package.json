@@ -1,0 +1,81 @@
+{
+  "name": "plain-editor",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A quiet desktop text editor with optional coding tools",
+  "productName": "Plain Editor",
+  "main": "electron/main.cjs",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "build": "theia build --mode development && node scripts/apply-theme.cjs",
+    "build:release": "theia build && node scripts/apply-theme.cjs",
+    "download:languages": "theia download:plugins",
+    "rebuild": "theia rebuild",
+    "start": "theia start --plugins=local-dir:./plugins",
+    "predesktop": "node scripts/configure-sandbox.cjs",
+    "desktop": "electron .",
+    "check": "theia check:theia-version",
+    "test": "node --test tests/*.test.cjs"
+  },
+  "theia": {
+    "target": "browser",
+    "frontend": {
+      "config": {
+        "applicationName": "Plain Editor",
+        "defaultTheme": "light",
+        "preferences": {
+          "editor.minimap.enabled": false,
+          "breadcrumbs.enabled": false,
+          "editor.wordWrap": "on",
+          "editor.renderWhitespace": "selection",
+          "files.autoSave": "onWindowChange",
+          "workbench.tree.renderIndentGuides": "none"
+        }
+      }
+    },
+    "backend": {
+      "config": {
+        "configurationFolder": ".plain-editor"
+      }
+    }
+  },
+  "theiaPluginsDir": "plugins",
+  "theiaPlugins": {
+    "vscode.git": "https://open-vsx.org/api/vscode/git/1.95.3/file/vscode.git-1.95.3.vsix",
+    "vscode.git-base": "https://open-vsx.org/api/vscode/git-base/1.95.3/file/vscode.git-base-1.95.3.vsix",
+    "vscode.python": "https://open-vsx.org/api/vscode/python/1.95.3/file/vscode.python-1.95.3.vsix",
+    "vscode.markdown": "https://open-vsx.org/api/vscode/markdown/1.95.3/file/vscode.markdown-1.95.3.vsix",
+    "vscode.markdown-language-features": "https://open-vsx.org/api/vscode/markdown-language-features/1.95.3/file/vscode.markdown-language-features-1.95.3.vsix",
+    "vscode.javascript": "https://open-vsx.org/api/vscode/javascript/1.95.3/file/vscode.javascript-1.95.3.vsix",
+    "vscode.typescript": "https://open-vsx.org/api/vscode/typescript/1.95.3/file/vscode.typescript-1.95.3.vsix",
+    "vscode.json": "https://open-vsx.org/api/vscode/json/1.95.3/file/vscode.json-1.95.3.vsix",
+    "vscode.html": "https://open-vsx.org/api/vscode/html/1.95.3/file/vscode.html-1.95.3.vsix",
+    "vscode.css": "https://open-vsx.org/api/vscode/css/1.95.3/file/vscode.css-1.95.3.vsix",
+    "vscode.cpp": "https://open-vsx.org/api/vscode/cpp/1.95.3/file/vscode.cpp-1.95.3.vsix"
+  },
+  "dependencies": {
+    "@theia/core": "1.76.0",
+    "@theia/editor": "1.76.0",
+    "@theia/filesystem": "1.76.0",
+    "@theia/markers": "1.76.0",
+    "@theia/messages": "1.76.0",
+    "@theia/monaco": "1.76.0",
+    "@theia/navigator": "1.76.0",
+    "@theia/plugin-ext-vscode": "1.76.0",
+    "@theia/preferences": "1.76.0",
+    "@theia/process": "1.76.0",
+    "@theia/terminal": "1.76.0",
+    "@theia/vsx-registry": "1.76.0",
+    "@theia/workspace": "1.76.0",
+    "drivelist": "12.0.2",
+    "plain-editor-ui": "file:extensions/plain-editor-ui"
+  },
+  "devDependencies": {
+    "@theia/cli": "1.76.0",
+    "electron": "^43.7.11"
+  }
+}
