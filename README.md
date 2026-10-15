@@ -8,9 +8,9 @@ It uses [Eclipse Theia](https://theia-ide.org/) for local files, Monaco editing,
 
 ## Source installation
 
-macOS setup: [macOS source-build instructions](docs/macos.md).
+Platform setup: [Windows](docs/windows.md) · [macOS](docs/macos.md).
 
-The `windows` and `macos` branches contain compatibility work for the existing application. See [branch and native-check policy](docs/branches.md). `main` and `development` are unchanged by this work.
+The verified Windows and macOS compatibility changes are integrated into `development`. See [branch and native-check policy](docs/branches.md).
 
 ### Linux
 
