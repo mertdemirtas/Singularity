@@ -79,7 +79,8 @@ jobs:
           const artifact = path.join(process.env.RUNNER_TEMP, 'release-check');
           fs.mkdirSync(artifact, { recursive: true });
           // Sparkle relaunches through LaunchServices, using the normal profile.
-          const profile = process.platform === 'darwin' ? path.join(os.homedir(), 'Library/Application Support/Singularity') : path.join(temp, 'profile');
+          const profile = process.platform === 'darwin' ? path.join(os.homedir(), 'Library/Application Support/Singularity')
+            : process.platform === 'win32' ? path.join(process.env.APPDATA, 'Singularity') : path.join(temp, 'profile');
           const config = path.join(temp, 'config'), project = path.join(temp, 'Project With Spaces');
           fs.mkdirSync(config); fs.mkdirSync(project);
           const filename = path.join(project, "example & quote's.py");
@@ -100,7 +101,7 @@ jobs:
           (async () => {
             // Install the actual distributable in a path containing spaces.
             if (process.platform === 'linux') {
-              run('sudo', ['dpkg', '-i', path.join(release, files.find(file => file.endsWith('.deb')))]);
+              run('sudo', ['apt-get', 'install', '-y', path.join(release, files.find(file => file.endsWith('.deb')))]);
               executable = '/opt/Singularity/singularity'; resources = '/opt/Singularity/resources';
               const sandbox = fs.statSync('/opt/Singularity/chrome-sandbox');
               assert.equal(sandbox.uid, 0); assert.equal(sandbox.mode & 0o7777, 0o4755);
@@ -198,17 +199,22 @@ jobs:
             // Installation must restart the app, preserving its profile and the
             // unsaved buffer despite the recovery preference being disabled.
             await until(() => !browser.connected, 120000); await browser.disconnect();
-            if (process.platform === 'darwin') {
-              // LaunchServices deliberately drops debugging flags. The marker
+            if (process.platform !== 'linux') {
+              // Native installers deliberately drop debugging flags. The marker
               // is cleared by the new frontend only after recovery succeeds.
               await until(() => {
                 try { return JSON.parse(fs.readFileSync(path.join(profile, 'workbench-state.json')))['singularity.restoreAfterUpdate'] === undefined; }
                 catch { return false; }
               });
               assert(fs.readdirSync(path.join(profile, 'recovery')).some(file => file.endsWith('.json') && fs.readFileSync(path.join(profile, 'recovery', file), 'utf8').includes('UNSAVED UPDATE RECOVERY 🪐')));
-              const processes = execFileSync('ps', ['-axo', 'command='], { encoding: 'utf8' });
-              assert(processes.split('\n').some(line => line.trim().startsWith(executable)));
-              console.log('macOS signed Sparkle update, LaunchServices restart and completed frontend recovery passed.');
+              if (process.platform === 'darwin') {
+                const processes = execFileSync('ps', ['-axo', 'command='], { encoding: 'utf8' });
+                assert(processes.split('\n').some(line => line.trim().startsWith(executable)));
+              } else {
+                const processes = execFileSync('powershell.exe', ['-NoProfile', '-Command', 'Get-Process Singularity | Select-Object -ExpandProperty Path'], { encoding: 'utf8' });
+                assert(processes.toLowerCase().includes(executable.toLowerCase()));
+              }
+              console.log(`${process.platform}: native update, automatic restart and completed frontend recovery passed.`);
               return;
             }
             await connect();

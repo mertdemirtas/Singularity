@@ -26,9 +26,15 @@ class StateStore {
       const data = await this.load();
       if (value === undefined) delete data[key];
       else data[key] = value;
-      await fs.mkdir(path.dirname(this.filename), { recursive: true });
-      await fs.writeFile(`${this.filename}.tmp`, JSON.stringify(data));
+      await fs.mkdir(path.dirname(this.filename), { recursive: true, mode: 0o700 });
+      const handle = await fs.open(`${this.filename}.tmp`, 'w', 0o600);
+      try { await handle.writeFile(JSON.stringify(data)); await handle.sync(); }
+      finally { await handle.close(); }
       await fs.rename(`${this.filename}.tmp`, this.filename);
+      if (process.platform !== 'win32') {
+        const directory = await fs.open(path.dirname(this.filename), 'r');
+        try { await directory.sync(); } finally { await directory.close(); }
+      }
       this.failure = undefined;
     });
     this.pending = update.catch(error => { this.failure = error; });

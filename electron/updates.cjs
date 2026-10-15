@@ -38,7 +38,7 @@ class Updates extends EventEmitter {
       };
       this.updater.on('update-available', info => this.set({ phase: 'available', availableVersion: info.version,
         message: `Singularity ${info.version} is available.` }));
-      this.updater.on('update-not-available', () => this.set({ phase: 'current', message: 'Singularity is up to date.' }));
+      this.updater.on('update-not-available', () => this.set({ phase: 'current', availableVersion: undefined, message: 'Singularity is up to date.' }));
       this.updater.on('download-progress', info => this.set({ phase: 'downloading', percent: Math.floor(info.percent),
         message: `Downloading update… ${Math.floor(info.percent)}%` }));
       // Operations handle rejections and keep the editor open. An error listener
@@ -71,7 +71,7 @@ class Updates extends EventEmitter {
         } catch (error) { if (error.code !== 4) throw new Error(error.stderr?.trim() || error.message); }
         if (version && newer(version, this.state.version)) {
           this.set({ phase: 'available', availableVersion: version, message: `Singularity ${version} is available.` });
-        } else this.set({ phase: 'current', message: 'Singularity is up to date.' });
+        } else this.set({ phase: 'current', availableVersion: undefined, message: 'Singularity is up to date.' });
       }
     } catch (error) { this.fail(error); }
     return this.state;

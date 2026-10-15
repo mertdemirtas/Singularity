@@ -302,6 +302,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
     let navigation;
     let chrome;
     let settings;
+    let recoveryReady = false;
     let updateState;
     let updateDialog;
     let notifiedVersion;
@@ -690,6 +691,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           window.plainEditorDesktop.onUpdateUnlock(unlockUpdate);
           window.plainEditorDesktop.onPrepareUpdate(async () => {
             try {
+              if (!recoveryReady) throw new Error('Document recovery is still starting. Please try the update again in a moment.');
               if (!updateDialog) {
                 updateDialog = document.createElement('dialog');
                 updateDialog.id = 'plain-update-progress';
@@ -1004,6 +1006,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           });
           const restoreAfterUpdate = await window.plainEditorDesktop.readState('singularity.restoreAfterUpdate');
           await recovery.start({ force: restoreAfterUpdate === true });
+          recoveryReady = true;
           if (restoreAfterUpdate && recovery.restoreSucceeded) await window.plainEditorDesktop.writeState('singularity.restoreAfterUpdate', undefined);
           if ([...shell.mainPanel.widgets()].some(widget => widget.id !== welcome.ID)) {
             [...shell.mainPanel.widgets()].find(widget => widget.id === welcome.ID)?.dispose();
