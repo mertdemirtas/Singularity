@@ -9,7 +9,7 @@ const bundlePath = path.join(root, 'lib/frontend/bundle.css');
 const scriptPath = path.join(root, 'lib/frontend/bundle.js');
 const htmlPath = path.join(root, 'lib/frontend/index.html');
 const themePath = path.join(root, 'styles/plain-editor.css');
-const iconPath = path.join(root, 'assets/app-icon.png');
+const iconPath = path.join(root, 'assets/singularity-icon.png');
 const marker = '/* Singularity theme */';
 
 if (!fs.existsSync(bundlePath)) {

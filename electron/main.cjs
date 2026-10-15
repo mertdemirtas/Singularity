@@ -162,7 +162,7 @@ async function start() {
   Menu.setApplicationMenu(null);
   mainWindow = new BrowserWindow({
     title: 'Singularity',
-    icon: path.join(root, 'assets', 'app-icon.png'),
+    icon: path.join(root, 'assets', 'singularity-icon.png'),
     width: 1120,
     height: 760,
     minWidth: 680,

@@ -1,6 +1,6 @@
 # Singularity
 
-<img src="assets/app-icon.png" width="96" alt="Singularity icon">
+<img src="assets/singularity-icon.png" width="96" alt="Singularity icon">
 
 Singularity is a small Ubuntu-inspired desktop editor for notes and code. It restores the tabs and split views from the previous session. With no tabs to restore, a Welcome page offers Open File, Open Folder, New File, recent files, and Settings.
 
