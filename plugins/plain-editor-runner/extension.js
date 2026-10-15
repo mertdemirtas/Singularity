@@ -32,7 +32,7 @@ async function activate(context) {
     if (!terminal) {
       terminal = vscode.window.createTerminal({
         name: `Python: ${path.basename(filename)}`,
-        cwd: path.dirname(filename),
+        cwd: vscode.Uri.file(path.dirname(filename)),
         ...(process.platform === 'win32' ? {
           shellPath: path.join(process.env.SystemRoot || 'C:\\Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe'),
           shellArgs: ['-NoLogo', '-NoProfile']
@@ -41,7 +41,10 @@ async function activate(context) {
       terminals.set(filename, terminal);
     }
     terminal.show();
-    terminal.sendText(commandLine(python, path.basename(filename)));
+    // Theia creates the terminal widget before its PTY connection is ready.
+    // Sending immediately can discard the first command on a slower startup.
+    await terminal.processId;
+    terminal.sendText(commandLine(python, filename));
   });
   context.subscriptions.push(disposable);
 

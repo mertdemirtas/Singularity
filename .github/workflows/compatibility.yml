@@ -93,7 +93,7 @@ jobs:
             const start = Date.now();
             while (!browser) {
               if (child.exitCode !== null) throw new Error(`Desktop exited early (${child.exitCode}).`);
-              try { browser = await puppeteer.connect({ browserURL: `http://127.0.0.1:${port}`, defaultViewport: null }); }
+              try { browser = await puppeteer.connect({ browserURL: `http://127.0.0.1:${port}`, defaultViewport: null, protocolTimeout: 30000 }); }
               catch (error) { if (Date.now() - start > 90000) throw error; await delay(500); }
             }
             // Electron exposes its debugging port before BrowserWindow exists.
@@ -101,10 +101,12 @@ jobs:
             page = await target.page();
             page.on('pageerror', error => log.write(`PAGE ERROR: ${error.stack}\n`));
             await page.waitForSelector('#plain-header', { timeout: 90000 });
+            console.log('Desktop window ready.');
             assert((await page.title()).includes('Singularity'));
             assert.equal(await page.evaluate(() => window.plainEditorDesktop.platform), process.platform);
             const fonts = await page.evaluate(() => window.plainEditorDesktop.fontFamilies());
             assert(Array.isArray(fonts) && fonts.length > 0);
+            console.log(`Font discovery returned ${fonts.length} families.`);
             await page.evaluate(() => {
               const caches = [...theia.container._bindingDictionary._map.values()].flat().map(binding => binding.cache);
               window.nativeShell = caches.find(value => typeof value?.mainPanel?.onDidChangeCurrent === 'function');
@@ -114,11 +116,10 @@ jobs:
             if (await page.$eval(files, element => element.getAttribute('aria-pressed') !== 'true')) await page.click(files);
             const file = '#files .theia-TreeNode[title$=' + JSON.stringify(path.basename(filename)) + '] .theia-TreeNodeSegmentGrow';
             await page.waitForSelector(file, { visible: true });
-            await page.evaluate(async () => { await nativeShell.pendingUpdates; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
             // The desktop may relayout while its plugins finish activating.
             // Activate the selected DOM item without stale screen coordinates.
             await page.$eval(file, element => element.click());
-            await page.waitForFunction(name => nativeShell.mainPanel.currentTitle?.owner.title.label === name, {}, path.basename(filename));
+            await page.waitForFunction(name => nativeShell.mainPanel.currentTitle?.owner.title.label === name, { polling: 100 }, path.basename(filename));
             await page.evaluate(() => {
               const editor = nativeShell.mainPanel.currentTitle.owner.editor.getControl();
               editor.setValue("print('SINGULARITY_PYTHON_OK')\n# saved using the native shortcut\n");
@@ -131,15 +132,17 @@ jobs:
               if (Date.now() - saveStart > 10000) throw new Error('Native save shortcut failed.');
               await delay(100);
             }
-            await page.waitForFunction(() => !!nativeCommands._commands['plainEditor.runPython'], { timeout: 60000 });
+            console.log('File opening and native save shortcut passed.');
+            await page.waitForFunction(() => !!nativeCommands._commands['plainEditor.runPython'], { timeout: 60000, polling: 100 });
             await page.evaluate(() => nativeCommands.executeCommand('plainEditor.runPython'));
+            console.log('Python run command submitted.');
             await page.waitForFunction(() => {
               const terminal = [...nativeShell.bottomPanel.widgets()].find(widget => widget.title.label.startsWith('Python: '));
               const buffer = terminal?.getTerminal?.().buffer.active;
               if (!buffer) return false;
               const text = Array.from({ length: buffer.length }, (_, index) => buffer.getLine(index)?.translateToString()).join('\n');
               return text.includes('SINGULARITY_PYTHON_OK');
-            }, { timeout: 60000 });
+            }, { timeout: 60000, polling: 100 });
             await page.screenshot({ path: path.join(artifact, 'desktop.png') });
             await page.click('[data-plain-action="window-close"]');
             console.log(`Native ${process.platform}/${process.arch}: fonts, file path with spaces, save shortcut, and Python terminal passed.`);
@@ -160,6 +163,7 @@ jobs:
           });
           JS
       - name: Run native desktop check
+        timeout-minutes: 5
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
             xvfb-run -a node "$RUNNER_TEMP/singularity-native-check.cjs"
