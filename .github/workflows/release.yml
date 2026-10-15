@@ -48,7 +48,13 @@ jobs:
           # to invoke the real dpkg through Polkit during the installation check.
           printf 'polkit.addRule(function(action, subject) { if (action.id === "org.freedesktop.policykit.exec" && action.lookup("program") === "/usr/bin/dpkg" && subject.user === "%s") return polkit.Result.YES; });\n' "$(id -un)" | sudo tee /etc/polkit-1/rules.d/49-singularity-ci.rules >/dev/null
       - name: Native dependencies and release build
-        run: npm run setup
+        run: |
+          # Windows runners occasionally lose the node-gyp header download.
+          # Retry once; a repeated failure remains a failed release gate.
+          if ! npm run setup; then
+            if [ "$RUNNER_OS" != "Windows" ]; then exit 1; fi
+            npm run setup
+          fi
       - name: Build installer
         run: npm run package:release
       - name: Authenticate macOS updates and generate checksums
@@ -72,7 +78,9 @@ jobs:
           const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'Singularity Install '));
           const artifact = path.join(process.env.RUNNER_TEMP, 'release-check');
           fs.mkdirSync(artifact, { recursive: true });
-          const profile = path.join(temp, 'profile'), config = path.join(temp, 'config'), project = path.join(temp, 'Project With Spaces');
+          // Sparkle relaunches through LaunchServices, using the normal profile.
+          const profile = process.platform === 'darwin' ? path.join(os.homedir(), 'Library/Application Support/Singularity') : path.join(temp, 'profile');
+          const config = path.join(temp, 'config'), project = path.join(temp, 'Project With Spaces');
           fs.mkdirSync(config); fs.mkdirSync(project);
           const filename = path.join(project, "example & quote's.py");
           fs.writeFileSync(filename, "print('SINGULARITY_INSTALL_OK')\n");
@@ -180,6 +188,7 @@ jobs:
               return buffer && Array.from({ length: buffer.length }, (_, index) => buffer.getLine(index)?.translateToString()).join('\n').includes('SINGULARITY_INSTALL_OK');
             }, { timeout: 60000 });
             await page.evaluate(() => nativeShell.mainPanel.currentTitle.owner.editor.getControl().setValue('UNSAVED UPDATE RECOVERY 🪐\r\n'));
+            await page.screenshot({ path: path.join(artifact, 'before-update.png') });
             const available = await page.evaluate(() => plainEditorDesktop.updates('check'));
             assert.equal(available.phase, 'available', JSON.stringify(available)); assert.equal(available.availableVersion, '0.1.0');
             await page.click('[data-plain-action="settings"]');
@@ -189,6 +198,19 @@ jobs:
             // Installation must restart the app, preserving its profile and the
             // unsaved buffer despite the recovery preference being disabled.
             await until(() => !browser.connected, 120000); await browser.disconnect();
+            if (process.platform === 'darwin') {
+              // LaunchServices deliberately drops debugging flags. The marker
+              // is cleared by the new frontend only after recovery succeeds.
+              await until(() => {
+                try { return JSON.parse(fs.readFileSync(path.join(profile, 'workbench-state.json')))['singularity.restoreAfterUpdate'] === undefined; }
+                catch { return false; }
+              });
+              assert(fs.readdirSync(path.join(profile, 'recovery')).some(file => file.endsWith('.json') && fs.readFileSync(path.join(profile, 'recovery', file), 'utf8').includes('UNSAVED UPDATE RECOVERY 🪐')));
+              const processes = execFileSync('ps', ['-axo', 'command='], { encoding: 'utf8' });
+              assert(processes.split('\n').some(line => line.trim().startsWith(executable)));
+              console.log('macOS signed Sparkle update, LaunchServices restart and completed frontend recovery passed.');
+              return;
+            }
             await connect();
             await page.waitForFunction(() => {
               const caches = [...theia.container._bindingDictionary._map.values()].flat().map(binding => binding.cache);

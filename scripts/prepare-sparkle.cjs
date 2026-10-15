@@ -49,7 +49,9 @@ async function download(url, target, hash) {
 <key>CFBundleExecutable</key><string>sparkle</string><key>CFBundleName</key><string>Singularity Updater</string>
 <key>CFBundlePackageType</key><string>APPL</string><key>CFBundleVersion</key><string>${version}</string>
 <key>LSUIElement</key><true/><key>NSHighResolutionCapable</key><true/></dict></plist>`);
-    run('clang', ['-fobjc-arc', '-mmacosx-version-min=12.0', '-F', sdk, '-framework', 'Foundation', '-framework', 'AppKit', '-framework', 'Sparkle',
+    run('clang', ['-fobjc-arc', '-DSPU_OBJC_DIRECT=__attribute__((objc_direct))',
+      '-DSPU_OBJC_DIRECT_MEMBERS=__attribute__((objc_direct_members))',
+      '-mmacosx-version-min=12.0', '-F', sdk, '-framework', 'Foundation', '-framework', 'AppKit', '-framework', 'Sparkle',
       '-Wl,-rpath,@executable_path/../Frameworks', ...sources.filter(file => file.endsWith('.m')).map(file => path.join(temp, file)),
       '-o', path.join(contents, 'MacOS/sparkle')]);
     run('codesign', ['--force', '--deep', '--sign', '-', path.dirname(contents)]);
