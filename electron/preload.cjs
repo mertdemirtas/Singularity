@@ -4,6 +4,10 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('plainEditorDesktop', {
   platform: process.platform,
+  listRecovery() { return ipcRenderer.invoke('plain-editor:recovery-list'); },
+  saveRecovery(entry) { return ipcRenderer.invoke('plain-editor:recovery-save', entry); },
+  removeRecovery(id) { return ipcRenderer.invoke('plain-editor:recovery-remove', id); },
+  flushRecovery() { return ipcRenderer.invoke('plain-editor:recovery-flush'); },
   browser(request) { return ipcRenderer.invoke('plain-editor:browser', request); },
   onBrowserState(callback) {
     const listener = (_event, state) => callback(state);

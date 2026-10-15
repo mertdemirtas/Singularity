@@ -1,13 +1,13 @@
 # macOS source build
 
-Use the `macos` branch with a supported macOS installation on Apple Silicon
+Use the `development` branch with a supported macOS installation on Apple Silicon
 or Intel. Native CI builds run on macOS 15 for both architectures.
 
 Install Git, Node.js 24 LTS for your architecture, Python 3, and Xcode Command
 Line Tools (`xcode-select --install`). Then run in Terminal:
 
 ```sh
-git clone --branch macos https://github.com/mertdemirtas/Singularity.git
+git clone --branch development https://github.com/mertdemirtas/Singularity.git
 cd Singularity
 npm run setup
 npm run desktop

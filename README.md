@@ -58,6 +58,16 @@ Use the Extensions icon to search Open VSX for a LeetCode extension or other VS 
 
 Extension webviews use separate `*.webview.localhost` origins. This allows PDF viewers and other custom editors to load their resources and service workers in the desktop app. Recent files and Welcome actions use the registered file opener, so PDFs open through their installed viewer instead of being forced into the text editor. Right-click an entry in **Extension views** and select **Extension settings** to configure its owning extension.
 
+## Document recovery
+
+The desktop app keeps recovery copies of unsaved text, including new untitled documents, by default. It checkpoints one second after editing pauses and at least every five seconds during continuous typing. Copies are stored locally in the app profile's `recovery` directory, with private file permissions on Unix systems.
+
+On the next launch, recovery copies open as separate **Recovered** tabs with their text, language, and encoding. They remain unsaved documents: use **Save As** to keep them. This preserves files that changed outside the app while it was closed. Saving a document or explicitly choosing **Don't Save** clears its recovery copy. Edits made in recovered tabs are also protected against another crash.
+
+Under **Settings → Files and editing**, use **Recover unsaved documents after a crash** to enable or pause recovery, or **Recover documents** to open existing copies manually. The same switch is available as `plainEditor.recovery.enabled` in user settings.json. Pausing recovery keeps existing copies. The command palette also has **Singularity: Recover Unsaved Documents**. Damaged copies and write errors are reported; unreadable copies remain on disk.
+
+Recovery covers text documents in the desktop app. The most recent edits before a checkpoint may be lost if the app or computer stops abruptly.
+
 ## Development tools
 
 Use the **Source Control** icon below Files, open **Menu → Source Control**, or press **Ctrl+Shift+G** for Git. Git and Git Base are bundled; install Git on your computer and open a trusted repository folder to review diffs, stage changes, commit, manage branches, and use its remote commands. The app does not automatically commit or push.

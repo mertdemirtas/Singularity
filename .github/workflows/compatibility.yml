@@ -1,7 +1,7 @@
 name: Native platform compatibility
 on:
   push:
-    branches: [windows, macos]
+    branches: [development, windows, macos]
   pull_request:
     branches: [development, main]
   workflow_dispatch:
@@ -51,6 +51,33 @@ jobs:
         run: |
           npm run check
           node -e "require('node-pty'); require('keytar'); require('@parcel/watcher'); require('drivelist'); console.log('Native modules loaded on', process.platform, process.arch)"
+      - name: Check document recovery storage
+        run: |
+          node <<'JS'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs/promises');
+          const os = require('node:os');
+          const path = require('node:path');
+          const { randomUUID } = require('node:crypto');
+          const { pathToFileURL } = require('node:url');
+          const RecoveryStore = require('./electron/recovery-store.cjs');
+          (async () => {
+            const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'singularity-recovery-check-'));
+            try {
+              const store = new RecoveryStore(directory);
+              const entry = { id: randomUUID(), uri: pathToFileURL(path.join(directory, "quote's file.py")).href,
+                text: 'Unsaved 🪐\r\n', languageId: 'python', encoding: 'utf8' };
+              await store.save(entry);
+              await store.flush();
+              assert.equal((await new RecoveryStore(directory).list()).entries[0].text, entry.text);
+              await store.save({ ...entry, text: '' });
+              assert.equal((await store.list()).entries[0].text, '');
+              await store.remove(entry.id);
+              assert.deepEqual((await store.list()).entries, []);
+              console.log('Durable recovery storage passed on', process.platform);
+            } finally { await fs.rm(directory, { recursive: true, force: true }); }
+          })().catch(error => { console.error(error); process.exitCode = 1; });
+          JS
       - name: Prepare native desktop check
         run: |
           cat > "$RUNNER_TEMP/singularity-native-check.cjs" <<'JS'
@@ -171,6 +198,163 @@ jobs:
             xvfb-run -a node "$RUNNER_TEMP/singularity-native-check.cjs"
           else
             node "$RUNNER_TEMP/singularity-native-check.cjs"
+          fi
+      - name: Prepare recovery desktop check
+        run: |
+          cat > "$RUNNER_TEMP/singularity-recovery-check.cjs" <<'JS'
+          'use strict';
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const os = require('node:os');
+          const path = require('node:path');
+          const net = require('node:net');
+          const { spawn, spawnSync } = require('node:child_process');
+          const { pathToFileURL } = require('node:url');
+          const puppeteer = require(path.join(process.cwd(), 'node_modules/puppeteer'));
+          const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+          const artifact = path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'singularity-native-check', 'recovery');
+          fs.mkdirSync(artifact, {recursive: true});
+          const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'singularity-recovery-e2e-'));
+          const project = path.join(temp, 'Project With Spaces'), profile = path.join(temp, 'profile'), config = path.join(temp, 'config');
+          fs.mkdirSync(project); fs.mkdirSync(config);
+          const filename = path.join(project, "example & quote's.py");
+          const emptyFile = path.join(project, 'empty.txt');
+          fs.writeFileSync(emptyFile, 'delete this text\n');
+          fs.writeFileSync(filename, 'original on disk\n');
+          fs.writeFileSync(path.join(config, 'settings.json'), JSON.stringify({ 'files.autoSave': 'off', 'telemetry.telemetryLevel': 'off', 'security.workspace.trust.trustedFolders': [pathToFileURL(project).href] }));
+          fs.writeFileSync(path.join(config, 'recentworkspace.json'), JSON.stringify({ recentRoots: [pathToFileURL(project).href] }));
+          let child, browser, page, log, phase = 0;
+          async function until(callback, label) {
+            const start = Date.now();
+            while (!await callback()) { if (Date.now() - start > 15000) throw new Error('Timed out: ' + label); await pause(100); }
+          }
+          async function launch() {
+            phase++;
+            const server = net.createServer(); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+            const port = server.address().port; await new Promise(resolve => server.close(resolve));
+            log = fs.createWriteStream(path.join(artifact, 'desktop-' + phase + '.log'));
+            const flags = [`--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, '--disable-gpu'];
+            if (process.platform === 'linux') flags.push('--ozone-platform=x11');
+            child = spawn(process.execPath, ['scripts/launch-desktop.cjs', ...flags], {
+              cwd: process.cwd(), env: { ...process.env, THEIA_CONFIG_DIR: config }, detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe']
+            });
+            child.stdout.pipe(log, { end: false }); child.stderr.pipe(log, { end: false });
+            const start = Date.now();
+            while (!browser) {
+              if (child.exitCode !== null) throw new Error('App exited before connecting: ' + child.exitCode);
+              try { browser = await puppeteer.connect({ browserURL: `http://127.0.0.1:${port}`, defaultViewport: null, protocolTimeout: 20000 }); }
+              catch (error) { if (Date.now() - start > 60000) throw error; await pause(200); }
+            }
+            page = await (await browser.waitForTarget(target => target.type() === 'page', { timeout: 60000 })).page();
+            page.on('pageerror', error => console.error('Renderer error:', error.message));
+            await page.waitForSelector('#plain-header', { timeout: 60000 });
+            await page.evaluate(() => {
+              const caches = [...theia.container._bindingDictionary._map.values()].flat().map(binding => binding.cache);
+              window.qaShell = caches.find(value => typeof value?.mainPanel?.onDidChangeCurrent === 'function');
+              window.qaCommands = caches.find(value => Object.keys(value || {}).includes('_commands'));
+            });
+            await page.waitForFunction(() => !!qaCommands._commands['plain-editor.recover-documents'], { polling: 100, timeout: 30000 });
+            console.log('Launched phase', phase);
+          }
+          async function crash() {
+            await browser?.disconnect(); browser = undefined;
+            if (child && child.exitCode === null) {
+              if (process.platform === 'win32') {
+                const killed = spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, encoding: 'utf8' });
+                if (killed.error || killed.status !== 0) throw killed.error || new Error('Could not stop isolated desktop process tree: ' + killed.stderr);
+              } else { try { process.kill(-child.pid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') throw error; } }
+            }
+            child?.stdout.destroy(); child?.stderr.destroy(); child?.unref(); log?.end();
+            await pause(process.platform === 'win32' ? 1500 : 500);
+          }
+          async function copies() { return page.evaluate(() => plainEditorDesktop.listRecovery()); }
+          (async () => {
+            await launch();
+            const files = '.plain-rail-tools [data-plain-action="files"]';
+            await page.$eval(files, element => element.click());
+            const selector = '#files .theia-TreeNode[title$=' + JSON.stringify(path.basename(filename)) + '] .theia-TreeNodeSegmentGrow';
+            await page.waitForSelector(selector, { visible: true }); await page.$eval(selector, element => element.click());
+            await page.waitForFunction(() => !!qaShell.mainPanel.currentTitle?.owner.editor, { polling: 100 });
+            await page.evaluate(() => qaShell.mainPanel.currentTitle.owner.editor.getControl().setValue('UNSAVED FILE α\r\nsecond line\r\n'));
+            const emptySelector = '#files .theia-TreeNode[title$="empty.txt"] .theia-TreeNodeSegmentGrow';
+            await page.waitForSelector(emptySelector, { visible: true });
+            await page.$eval(emptySelector, element => element.click());
+            await page.waitForFunction(() => qaShell.mainPanel.currentTitle?.owner.title.label === 'empty.txt', { polling: 100 });
+            await page.evaluate(() => qaShell.mainPanel.currentTitle.owner.editor.getControl().setValue(''));
+            await page.evaluate(() => qaCommands.executeCommand('workbench.action.files.newUntitledFile'));
+            await page.waitForFunction(() => qaShell.mainPanel.currentTitle?.owner.getResourceUri?.().scheme === 'untitled', { polling: 100 });
+            await page.evaluate(() => qaShell.mainPanel.currentTitle.owner.editor.getControl().setValue('UNTITLED NOTES 🪐\n'));
+            await until(async () => (await copies()).entries.length === 3, 'background checkpoints');
+            assert.equal(fs.readFileSync(filename, 'utf8'), 'original on disk\n');
+            const originalIds = (await copies()).entries.map(entry => entry.id).sort();
+            await crash();
+            fs.writeFileSync(filename, 'EXTERNAL CHANGE\n');
+
+            await launch();
+            await page.waitForFunction(() => [...qaShell.mainPanel.widgets()].filter(widget => widget.title.label.startsWith('Recovered ')).length === 3, { polling: 100 });
+            let restored = await page.evaluate(() => [...qaShell.mainPanel.widgets()].filter(widget => widget.title.label.startsWith('Recovered ')).map(widget => ({ uri: widget.editor.document.uri, text: widget.editor.document.getText(), dirty: widget.saveable.dirty, auto: widget.saveable.autosaveable, language: widget.editor.document.languageId })));
+            assert(restored.every(entry => entry.uri.startsWith('untitled:') && entry.dirty && entry.auto === false));
+            assert(restored.some(entry => entry.text === 'UNSAVED FILE α\r\nsecond line\r\n' && entry.language === 'python'));
+            assert(restored.some(entry => entry.text === 'UNTITLED NOTES 🪐\n'));
+            assert(restored.some(entry => entry.text === ''));
+            assert.equal(fs.readFileSync(emptyFile, 'utf8'), 'delete this text\n');
+            assert.equal(fs.readFileSync(filename, 'utf8'), 'EXTERNAL CHANGE\n');
+            await page.evaluate(async () => {
+              const widget = [...qaShell.mainPanel.widgets()].find(widget => widget.title.label.startsWith('Recovered ') && widget.editor.document.getText().startsWith('UNSAVED FILE'));
+              await qaShell.activateWidget(widget.id);
+              widget.editor.getControl().setValue('RECOVERED AGAIN\n');
+            });
+            await until(async () => (await copies()).entries.some(entry => entry.text === 'RECOVERED AGAIN\n'), 'edits to recovered copy');
+            assert.deepEqual((await copies()).entries.map(entry => entry.id).sort(), originalIds);
+            await crash();
+
+            await launch();
+            await page.waitForFunction(() => [...qaShell.mainPanel.widgets()].filter(widget => widget.title.label.startsWith('Recovered ')).length === 3, { polling: 100 });
+            const saved = path.join(project, 'kept-recovery.py');
+            await page.evaluate(async target => {
+              const widget = [...qaShell.mainPanel.widgets()].find(widget => widget.title.label.startsWith('Recovered ') && widget.editor.document.getText() === 'RECOVERED AGAIN\n');
+              const caches = [...theia.container._bindingDictionary._map.values()].flat().map(binding => binding.cache);
+              const service = caches.find(value => value && Object.getOwnPropertyNames(Object.getPrototypeOf(value) || {}).includes('saveSnapshot'));
+              if (!service) throw new Error('Save As service not found.');
+              await service.saveSnapshot(widget, new (widget.getResourceUri().constructor)(target), false);
+            }, pathToFileURL(saved).href);
+            assert.equal(fs.readFileSync(saved, 'utf8'), 'RECOVERED AGAIN\n');
+            await until(async () => (await copies()).entries.length === 2, 'Save As removes recovery copy');
+            const savedEmpty = path.join(project, 'kept-empty.txt');
+            await page.evaluate(async target => {
+              const widget = [...qaShell.mainPanel.widgets()].find(widget => widget.title.label.startsWith('Recovered ') && widget.editor.document.getText() === '');
+              const caches = [...theia.container._bindingDictionary._map.values()].flat().map(binding => binding.cache);
+              const service = caches.find(value => value && Object.getOwnPropertyNames(Object.getPrototypeOf(value) || {}).includes('saveSnapshot'));
+              await service.saveSnapshot(widget, new (widget.getResourceUri().constructor)(target), false);
+            }, pathToFileURL(savedEmpty).href);
+            assert.equal(fs.readFileSync(savedEmpty, 'utf8'), '');
+            await until(async () => (await copies()).entries.length === 1, 'saving the empty recovered document clears its copy');
+            await page.evaluate(async () => {
+              const widget = [...qaShell.mainPanel.widgets()].find(widget => widget.title.label.startsWith('Recovered '));
+              await widget.saveable.revert(); await qaShell.closeWidget(widget.id);
+            });
+            await until(async () => (await copies()).entries.length === 0, 'discard removes recovery copy');
+            assert.equal(fs.readFileSync(filename, 'utf8'), 'EXTERNAL CHANGE\n');
+            await page.screenshot({ path: path.join(artifact, 'recovery-complete.png') });
+            await page.$eval('[data-plain-action="settings"]', element => element.click());
+            await page.waitForSelector('#plain-settings[open]');
+            assert.equal(await page.$eval('#plain-recovery', element => element.checked), true);
+            await page.screenshot({ path: path.join(artifact, 'recovery-settings.png') });
+            console.log(`PASS ${process.platform}/${process.arch}: two actual crashes; saved, empty, and untitled text; Unicode/CRLF; external changes preserved; repeated recovery; Save As; discard; settings.`);
+            console.log('Artifacts:', artifact);
+          })().catch(async error => {
+            console.error(error); process.exitCode = 1;
+            if (page) { await page.screenshot({ path: path.join(artifact, 'failure.png') }).catch(() => {}); console.error(await page.evaluate(() => document.body.innerText).catch(() => 'closed')); }
+            console.log('Artifacts:', artifact);
+          }).finally(crash);
+          JS
+      - name: Run recovery crash and restore check
+        timeout-minutes: 6
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a node "$RUNNER_TEMP/singularity-recovery-check.cjs"
+          else
+            node "$RUNNER_TEMP/singularity-recovery-check.cjs"
           fi
       - uses: actions/upload-artifact@v4
         if: always()

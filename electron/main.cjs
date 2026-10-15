@@ -10,6 +10,7 @@ const path = require('node:path');
 const { fileURLToPath } = require('node:url');
 const { promisify } = require('node:util');
 const StateStore = require('./state-store.cjs');
+const RecoveryStore = require('./recovery-store.cjs');
 const { installBrowserHost } = require('./browser-host.cjs');
 const { installedFonts, windowOptions } = require('./platform.cjs');
 
@@ -33,7 +34,9 @@ let frontendReady = false;
 let recentWrite = Promise.resolve();
 let fontFamilies;
 let desktopState;
+let recovery;
 const stateStore = () => desktopState ||= new StateStore(path.join(app.getPath('userData'), 'workbench-state.json'));
+const recoveryStore = () => recovery ||= new RecoveryStore(path.join(app.getPath('userData'), 'recovery'));
 const validStateKey = key => typeof key === 'string' && key.length > 0 && key.length < 16384;
 const browserHost = installBrowserHost(() => mainWindow);
 
@@ -222,6 +225,15 @@ async function start() {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
+  for (const [action, handler] of [
+    ['list', () => recoveryStore().list()],
+    ['save', entry => recoveryStore().save(entry)],
+    ['remove', id => recoveryStore().remove(id)],
+    ['flush', () => recoveryStore().flush()]
+  ]) ipcMain.handle(`plain-editor:recovery-${action}`, (event, value) => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('Recovery access denied.');
+    return handler(value);
+  });
   ipcMain.handle('plain-editor:read-state', (event, key) => {
     if (event.sender !== mainWindow?.webContents || !validStateKey(key)) return undefined;
     return stateStore().get(key);

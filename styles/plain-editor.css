@@ -306,4 +306,6 @@ body.plain-editor-ready #theia-main-content-panel .lm-DockPanel-handle{border-co
 .plain-extension-setting-status{display:block;margin-top:5px;color:var(--theia-descriptionForeground);font-size:11px}
 .plain-extension-setting-status.error{color:var(--theia-errorForeground)}
 #plain-extension-settings button:hover{background:var(--theia-toolbar-hoverBackground)}
+.plain-recovery-help{grid-column:1 / -1;font:inherit;color:var(--theia-descriptionForeground);margin:4px 0}
+#plain-settings [data-settings-action="recover"]{grid-column:1 / -1;justify-self:start;font:inherit;color:var(--theia-button-secondaryForeground,var(--theia-foreground));background:var(--theia-button-secondaryBackground,var(--theia-input-background));border:1px solid var(--theia-panel-border);border-radius:5px;padding:6px 9px;cursor:pointer}
 #plain-extension-settings input:focus-visible,#plain-extension-settings select:focus-visible,#plain-extension-settings textarea:focus-visible,#plain-extension-settings button:focus-visible{outline:2px solid var(--theia-focusBorder);outline-offset:1px}

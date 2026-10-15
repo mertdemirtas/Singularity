@@ -31,6 +31,8 @@ const createChromeLayout = require('./chrome-layout');
 const { SIDEBAR_VISIBLE } = createChromeLayout;
 const AppHistory = require('./app-history');
 const { primaryPressed, navigationShortcut, navigationDirection } = require('./platform');
+const { UntitledResourceResolver } = require('@theia/core/lib/common/resource');
+const { RecoveryController, ENABLED: RECOVERY_ENABLED } = require('./recovery');
 const focusChanged = new Emitter();
 
 const icons = {
@@ -162,9 +164,17 @@ function buildSettings() {
         <div id="plain-delay-row"><label for="plain-auto-save-delay">Delay</label><div class="plain-number-field"><input id="plain-auto-save-delay" data-preference="files.autoSaveDelay" type="number" min="0" max="60000" step="100"><span>ms</span></div></div>
         <label class="plain-check"><input id="plain-minimap" data-preference="editor.minimap.enabled" type="checkbox"><span>Show code minimap</span></label>
         <label class="plain-check"><input id="plain-wrap" data-preference="editor.wordWrap" type="checkbox"><span>Wrap long lines</span></label>
+        <label class="plain-check"><input id="plain-recovery" data-preference="${RECOVERY_ENABLED}" type="checkbox"><span>Recover unsaved documents after a crash</span></label>
+        <p class="plain-recovery-help">Recovery copies stay on this computer. Turning recovery off keeps existing copies.</p>
+        <button type="button" data-settings-action="recover">Recover documents</button>
       </section>
     </div>
     <div class="plain-settings-footer"><button type="button" data-settings-action="all">All settings</button><button type="button" data-settings-action="json">Open user settings.json</button></div>`;
+  if (!window.plainEditorDesktop) {
+    dialog.querySelector('#plain-recovery').disabled = true;
+    dialog.querySelector('[data-settings-action="recover"]').disabled = true;
+    dialog.querySelector('.plain-recovery-help').textContent = 'Recovery is available in the desktop app.';
+  }
   document.body.append(dialog);
   return dialog;
 }
@@ -182,7 +192,8 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
   require('./development-tools')(bind);
   bind(PreferenceContribution).toConstantValue({ schema: {
     type: 'object', properties: {
-      [SIDEBAR_VISIBLE]: { type: 'boolean', default: true, description: 'Show the sidebar and its open side pane.' }
+      [SIDEBAR_VISIBLE]: { type: 'boolean', default: true, description: 'Show the sidebar and its open side pane.' },
+      [RECOVERY_ENABLED]: { type: 'boolean', default: true, description: 'Keep local recovery copies of unsaved text and reopen them after a crash. Existing copies are kept when disabled.' }
     }
   } });
   bind(TabBarToolbarContribution).toDynamicValue(({ container }) => {
@@ -260,6 +271,23 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
     const layoutRestorer = container.get(ShellLayoutRestorer);
     const openers = container.get(OpenerService);
     const plugins = container.get(HostedPluginSupport);
+    const recovery = window.plainEditorDesktop ? new RecoveryController({
+      api: window.plainEditorDesktop, manager: editorManager, preferences, messages,
+      openRecovery: async (entry, uri) => {
+        const resolver = container.get(UntitledResourceResolver);
+        const resourceUri = new URI(uri);
+        if (!resolver.has(resourceUri)) {
+          const resource = await resolver.createUntitledResource(entry.text, '', resourceUri, entry.encoding);
+          // An empty recovery copy can represent deleting the whole document.
+          resource.initiallyDirty = true;
+        }
+        const widget = await editorManager.open(resourceUri, { mode: 'activate', preview: false });
+        widget.editor.setLanguage(entry.languageId);
+        widget.title.label = `Recovered ${new URI(entry.uri).path.base || 'Untitled'}`;
+        widget.title.caption = `Recovered from ${entry.uri} (${new Date(entry.updatedAt).toLocaleString()})`;
+        return widget;
+      }
+    }) : undefined;
     let shell;
     let menu;
     let openMenu;
@@ -594,6 +622,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       settings.querySelector('#plain-font-size').value = preferences.get('editor.fontSize', 14);
       settings.querySelector('#plain-auto-save').value = preferences.get('files.autoSave', 'onWindowChange');
       settings.querySelector('#plain-auto-save-delay').value = preferences.get('files.autoSaveDelay', 1000);
+      settings.querySelector('#plain-recovery').checked = preferences.get(RECOVERY_ENABLED, true);
       settings.querySelector('#plain-minimap').checked = preferences.get('editor.minimap.enabled', false);
       settings.querySelector('#plain-wrap').checked = preferences.get('editor.wordWrap', 'on') === 'on';
       settings.querySelector('#plain-delay-row').hidden = settings.querySelector('#plain-auto-save').value !== 'afterDelay';
@@ -629,6 +658,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
             try {
               approved = await windowService.isSafeToShutDown(StopReason.Close);
               if (approved) {
+                await recovery?.flush({ closing: true });
                 layoutRestorer.storeLayout(app);
                 await window.plainEditorDesktop.flushState();
               }
@@ -800,6 +830,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           if (action === 'close') settings.close();
           if (action === 'all') { settings.close(); execute('preferences:open'); }
           if (action === 'json') { settings.close(); actions['settings-json'](); }
+          if (action === 'recover') { settings.close(); recovery?.recover(); }
         });
         settings.addEventListener('change', event => {
           if (event.target.matches('[data-preference]')) saveSetting(event.target);
@@ -906,6 +937,15 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           const page = await widgets.getOrCreateWidget(welcome.ID);
           await shell.addWidget(page, { area: 'main' });
           await shell.activateWidget(page.id);
+        }
+        if (recovery) {
+          commands.registerCommand({ id: 'plain-editor.recover-documents', label: 'Recover Unsaved Documents', category: 'Singularity' }, {
+            execute: () => recovery.recover()
+          });
+          await recovery.start();
+          if ([...shell.mainPanel.widgets()].some(widget => widget.id !== welcome.ID)) {
+            [...shell.mainPanel.widgets()].find(widget => widget.id === welcome.ID)?.dispose();
+          }
         }
         recordNavigation();
       }

@@ -1,13 +1,13 @@
 # Windows source build
 
-Use the `windows` branch on Windows 10/11 x64. Install Git for Windows, Node.js
+Use the `development` branch on Windows 10/11 x64. Install Git for Windows, Node.js
 24 LTS, Python 3, and Visual Studio 2022 Build Tools with Desktop development
 with C++ and a Windows SDK. Python and Node must be available in the terminal.
 
 From PowerShell or Command Prompt:
 
 ```text
-git clone --branch windows https://github.com/mertdemirtas/Singularity.git
+git clone --branch development https://github.com/mertdemirtas/Singularity.git
 cd Singularity
 npm run setup
 npm run desktop
