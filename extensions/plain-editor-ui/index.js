@@ -153,8 +153,7 @@ function buildSettings() {
       <section><h3>Appearance</h3>
         <label class="plain-check"><input id="plain-sidebar-visible" data-preference="${SIDEBAR_VISIBLE}" type="checkbox"><span>Show sidebar</span></label>
         <label for="plain-theme">Theme</label><select id="plain-theme" data-preference="workbench.colorTheme"></select>
-        <label for="plain-font">Font family</label><input id="plain-font" data-preference="editor.fontFamily" list="plain-fonts" type="text" spellcheck="false" autocomplete="off" placeholder="Monospace">
-        <datalist id="plain-fonts"><option value="monospace"><option value="Ubuntu Mono"><option value="DejaVu Sans Mono"><option value="JetBrains Mono"><option value="Fira Code"></datalist>
+        <label for="plain-font">Font family</label><select id="plain-font" data-preference="editor.fontFamily"></select>
         <label for="plain-font-size">Editor font size</label><div class="plain-number-field"><input id="plain-font-size" data-preference="editor.fontSize" type="number" min="8" max="48" step="1"><span>px</span></div>
       </section>
       <section><h3>Files and editing</h3>
@@ -269,6 +268,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
     let navigation;
     let chrome;
     let settings;
+    let availableFonts = ['monospace', 'Ubuntu Mono', 'DejaVu Sans Mono', 'JetBrains Mono', 'Fira Code'];
     let recentFiles = [];
     let focusMode = false;
     let focusPanels = [];
@@ -512,7 +512,8 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         syncSettings();
         if (!settings.open) settings.showModal();
         if (window.plainEditorDesktop) window.plainEditorDesktop.fontFamilies().then(families => {
-          settings.querySelector('#plain-fonts').replaceChildren(...families.map(name => new Option(name, name)));
+          availableFonts = families;
+          syncFontOptions();
         }).catch(error => console.error('Plain Editor: font list', error));
       },
       quit: () => window.plainEditorDesktop?.requestClose(),
@@ -576,12 +577,19 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         renderRecentFiles();
       }
     };
+    const syncFontOptions = () => {
+      const selected = fontName(preferences.get('editor.fontFamily', 'monospace'));
+      const names = [...new Set(['monospace', ...availableFonts, selected])].sort((a, b) => a.localeCompare(b));
+      const select = settings.querySelector('#plain-font');
+      select.replaceChildren(...names.map(name => new Option(name, name)));
+      select.value = selected;
+    };
     const syncSettings = () => {
       const themeSelect = settings.querySelector('#plain-theme');
       themeSelect.replaceChildren(...themes.getThemes().sort((a, b) => a.label.localeCompare(b.label)).map(theme => new Option(theme.label, theme.id)));
       themeSelect.value = themes.getCurrentTheme().id;
       settings.querySelector('#plain-sidebar-visible').checked = preferences.get(SIDEBAR_VISIBLE, true);
-      settings.querySelector('#plain-font').value = fontName(preferences.get('editor.fontFamily', 'monospace'));
+      syncFontOptions();
       settings.querySelector('#plain-font-size').value = preferences.get('editor.fontSize', 14);
       settings.querySelector('#plain-auto-save').value = preferences.get('files.autoSave', 'onWindowChange');
       settings.querySelector('#plain-auto-save-delay').value = preferences.get('files.autoSaveDelay', 1000);
@@ -613,6 +621,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         shell = app.shell;
         await preferences.ready;
         syncFont();
+        require('./editor-scroll')(editorManager);
         if (window.plainEditorDesktop) {
           window.plainEditorDesktop.onCloseRequested(async () => {
             let approved = false;
