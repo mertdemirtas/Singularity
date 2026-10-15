@@ -156,11 +156,12 @@ jobs:
             const port = portServer.address().port; await new Promise(resolve => portServer.close(resolve));
             const flags = [`--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, '--disable-gpu'];
             if (process.platform === 'linux') flags.push('--ozone-platform=x11');
-            child = spawn(executable, flags, { cwd: temp, env: { ...process.env, THEIA_CONFIG_DIR: config }, stdio: ['ignore', 'pipe', 'pipe'] });
+            child = spawn(executable, flags, { cwd: temp, env: { ...process.env, THEIA_CONFIG_DIR: config },
+              detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] });
             child.stdout.pipe(log, { end: false }); child.stderr.pipe(log, { end: false });
             async function connect() {
               await until(async () => {
-                try { browser = await puppeteer.connect({ browserURL: `http://127.0.0.1:${port}`, defaultViewport: null }); return true; }
+                try { browser = await puppeteer.connect({ browserURL: `http://127.0.0.1:${port}`, defaultViewport: null, protocolTimeout: 30000 }); return true; }
                 catch { return false; }
               });
               const target = await browser.waitForTarget(target => target.type() === 'page', { timeout: 120000 });
@@ -240,11 +241,12 @@ jobs:
             console.error(error); process.exitCode = 1;
             if (page) { await page.screenshot({ path: path.join(artifact, 'failure.png') }).catch(() => {}); console.error(await page.evaluate(() => document.body.innerText).catch(() => 'Window closed')); }
           }).finally(async () => {
-            if (browser?.connected) {
-              const session = await browser.target().createCDPSession().catch(() => undefined);
-              await session?.send('Browser.close').catch(() => {}); await browser.disconnect();
+            if (browser) await browser.disconnect();
+            if (child?.exitCode === null) {
+              if (process.platform === 'win32') {
+                try { run('taskkill.exe', ['/PID', String(child.pid), '/T', '/F']); } catch {}
+              } else { try { process.kill(-child.pid, 'SIGKILL'); } catch {} }
             }
-            if (child?.exitCode === null) child.kill();
             child?.stdout.destroy(); child?.stderr.destroy(); child?.unref();
             server?.closeAllConnections(); server?.close(); log.end();
           });
