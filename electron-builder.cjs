@@ -8,6 +8,8 @@ module.exports = {
   // Keep physical paths available to that process and preserve its Node ABI.
   asar: false,
   npmRebuild: false,
+  // The legacy NSIS 3.0 compiler cannot opt into Windows long paths.
+  toolsets: { nsis: '1.2.1' },
   files: [
     'electron/**/*', 'assets/singularity-icon.png', 'lib/**/*', 'plugins/**/*',
     'extensions/plain-editor-ui/**/*', 'package.json', 'LICENSE',
