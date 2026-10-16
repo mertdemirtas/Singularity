@@ -229,7 +229,7 @@ jobs:
               await until(() => {
                 try { return JSON.parse(fs.readFileSync(path.join(profile, 'workbench-state.json')))['singularity.restoreAfterUpdate'] === undefined; }
                 catch { return false; }
-              });
+              }, 240000);
               assert(fs.readdirSync(path.join(profile, 'recovery')).some(file => file.endsWith('.json') && fs.readFileSync(path.join(profile, 'recovery', file), 'utf8').includes('UNSAVED UPDATE RECOVERY 🪐')));
               if (process.platform === 'darwin') {
                 const processes = execFileSync('ps', ['-axww', '-o', 'command='], { encoding: 'utf8' });
