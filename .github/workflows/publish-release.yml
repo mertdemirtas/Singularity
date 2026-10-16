@@ -68,4 +68,5 @@ jobs:
           version=$(node -p 'require("./package.json").version')
           # Creating the tag with the workflow token does not start recursive
           # builds. These exact installers have already passed all native gates.
-          gh release create "v$version" release/* --target "$(git rev-parse HEAD)" --title "Singularity $version" --notes-file docs/release-notes.md --latest
+          gh release create "v$version" release/* --target "$(git rev-parse HEAD)" --title "Singularity $version" --notes-file docs/release-notes.md --draft
+          gh release edit "v$version" --draft=false --latest

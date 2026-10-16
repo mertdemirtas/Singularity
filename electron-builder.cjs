@@ -18,7 +18,8 @@ module.exports = {
   artifactName: 'Singularity-${version}-${os}-${arch}.${ext}',
   publish: { provider: 'github', owner: 'mertdemirtas', repo: 'Singularity', releaseType: 'release' },
   win: { target: ['nsis'], icon: 'assets/singularity-icon.png' },
-  nsis: { oneClick: true, perMachine: false, allowElevation: true, deleteAppDataOnUninstall: false },
+  nsis: { oneClick: true, perMachine: false, allowElevation: true, deleteAppDataOnUninstall: false,
+    include: 'build/installer.nsh' },
   mac: {
     target: ['dmg', 'zip'], category: 'public.app-category.developer-tools',
     icon: 'assets/singularity-icon.png',

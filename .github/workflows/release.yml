@@ -114,6 +114,10 @@ jobs:
                 { windowsVerbatimArguments: true, timeout: 300000 });
               executable = path.join(destination, 'Singularity.exe'); resources = path.join(destination, 'resources');
               await until(() => fs.existsSync(path.join(resources, 'app/package.json')));
+              const installedFiles = fs.readdirSync(destination, { recursive: true });
+              const longest = installedFiles.map(file => path.join(destination, file)).sort((a, b) => b.length - a.length)[0];
+              console.log('Longest installed path:', longest.length, longest);
+              run('reg.exe', ['query', 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\FileSystem', '/v', 'LongPathsEnabled']);
             } else {
               const mount = path.join(temp, 'mount');
               run('hdiutil', ['attach', '-nobrowse', '-mountpoint', mount, path.join(release, files.find(file => file.endsWith('.dmg')))]);
@@ -247,6 +251,11 @@ jobs:
               const target = path.join(artifact, 'windows-desktop.png').replace(/'/g, "''");
               const script = "Add-Type -AssemblyName System.Windows.Forms,System.Drawing; $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; $image = New-Object System.Drawing.Bitmap($bounds.Width,$bounds.Height); $graphics = [System.Drawing.Graphics]::FromImage($image); $graphics.CopyFromScreen($bounds.Location,[System.Drawing.Point]::Empty,$bounds.Size); $image.Save('" + target + "'); $graphics.Dispose(); $image.Dispose(); Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'Singularity|node' } | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine | ConvertTo-Json";
               try { run('powershell.exe', ['-NoProfile', '-Command', script], { timeout: 15000 }); } catch {}
+              const uninstallLog = path.join(os.tmpdir(), 'Singularity-uninstall-error.log');
+              if (fs.existsSync(uninstallLog)) {
+                console.error(fs.readFileSync(uninstallLog, 'utf8'));
+                fs.copyFileSync(uninstallLog, path.join(artifact, 'uninstall-error.log'));
+              }
             }
             if (page) { await page.screenshot({ path: path.join(artifact, 'failure.png') }).catch(() => {}); console.error(await page.evaluate(() => document.body.innerText).catch(() => 'Window closed')); }
           }).finally(async () => {
