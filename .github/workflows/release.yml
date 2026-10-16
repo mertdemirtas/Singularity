@@ -211,7 +211,15 @@ jobs:
             await page.click('[data-plain-action="settings"]');
             await page.waitForSelector('[data-settings-action="install-update"]', { visible: true });
             await page.click('[data-settings-action="install-update"]');
-            await until(() => JSON.parse(fs.readFileSync(packageFile)).version === '0.1.0', 240000);
+            await until(() => {
+              // NSIS removes the old tree before extracting the new one. The
+              // version file may be absent or partially written during that gap.
+              try { return JSON.parse(fs.readFileSync(packageFile)).version === '0.1.0'; }
+              catch (error) {
+                if (error.code === 'ENOENT' || error instanceof SyntaxError) return false;
+                throw error;
+              }
+            }, 240000);
             // Installation must restart the app, preserving its profile and the
             // unsaved buffer despite the recovery preference being disabled.
             await until(() => !browser.connected, 120000); await browser.disconnect();
@@ -229,7 +237,11 @@ jobs:
                 assert(processes.split('\n').some(line => [executable, canonical].some(name => line.trim().startsWith(name))));
               } else {
                 const processes = execFileSync('powershell.exe', ['-NoProfile', '-Command', 'Get-Process Singularity | Select-Object -ExpandProperty Path'], { encoding: 'utf8' });
-                assert(processes.toLowerCase().includes(executable.toLowerCase()));
+                const canonical = fs.realpathSync.native(executable).toLowerCase();
+                assert(processes.split('\n').some(name => {
+                  try { return fs.realpathSync.native(name.trim()).toLowerCase() === canonical; }
+                  catch { return false; }
+                }));
               }
               console.log(`${process.platform}: native update, automatic restart and completed frontend recovery passed.`);
               return;
