@@ -46,7 +46,6 @@ const icons = {
   menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   focus: '<path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/>',
   extensions: '<path d="M8 3h4v4a2 2 0 1 0 4 0V3h5v6h-4a2 2 0 1 0 0 4h4v8h-8v-4a2 2 0 1 0-4 0v4H3v-8h4a2 2 0 1 0 0-4H3V3h5Z"/>',
-  views: '<path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/>',
   pane: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16M17.5 8h1M17.5 12h1M17.5 16h1"/>',
   minus: '<path d="M5 12h14"/>',
   square: '<rect x="5" y="5" width="14" height="14" rx="1"/>',
@@ -78,14 +77,13 @@ function buildHeader() {
     <div class="plain-rail-tools">
       ${button('Files', 'files', 'files', 'plain-icon-only')}
       ${button('Source Control', 'git', 'source-control', 'plain-icon-only')}
+      <div id="plain-extension-icons" role="group" aria-label="Extension views"></div>
     </div>
     <div class="plain-rail-footer">
       ${button('Extensions', 'extensions', 'extensions', 'plain-icon-only')}
-      ${button('Extension views', 'views', 'extension-views', 'plain-icon-only')}
       ${button('Terminal', 'terminal', 'terminal', 'plain-icon-only plain-hide-in-focus')}
       ${button('Menu', 'menu', 'menu', 'plain-icon-only plain-hide-in-focus')}
     </div>
-    <div id="plain-extension-views-menu" role="menu" aria-label="Extension views" hidden></div>
     <div id="plain-menu" role="menu" hidden>
       <button type="button" role="menuitem" data-plain-action="save-as">Save As…</button>
       <button type="button" role="menuitem" data-plain-action="save-all">Save All</button>
@@ -405,7 +403,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         openMenu.hidden = true;
         openAnchor?.setAttribute('aria-expanded', 'false');
       }
-      chrome?.closeExtensionMenu();
+      chrome?.closeExtensionContextMenu();
     };
     const toggleFocus = async () => {
       focusMode = !focusMode;
@@ -451,7 +449,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       const area = panelArea();
       clearTimeout(hoverTimer);
       if (preview && pinnedSide) return;
-      if (!preview && !navigating && pinnedSide === id && shell.isExpanded(area)) {
+      if (!preview && !navigating && pinnedSide === id && shell.getWidgetById(id) && shell.isExpanded(area)) {
         pinnedSide = '';
         await closePreview();
         await shell.collapsePanel(area);
@@ -466,10 +464,13 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         document.body.classList.add('plain-side-peek');
       }
       try {
-        const widget = shell.getWidgetById(id);
-        if (widget && shell.getAreaFor(widget) !== area) await shell.addWidget(widget, { area, rank: 100 });
+        // Closed views and views omitted from a restored layout must be created
+        // before revealing them: revealWidget does not create missing widgets.
+        const widget = shell.getWidgetById(id) || (sideWidgets[name] && await widgets.getOrCreateWidget(id));
+        if (!widget) throw new Error('The view is unavailable.');
+        if (shell.getAreaFor(widget) !== area) await shell.addWidget(widget, { area, rank: 100 });
         await shell.revealWidget(id);
-        if (!preview) shell.activateWidget(id);
+        if (!preview) await shell.activateWidget(id);
         if (preview && previewSide !== id) {
           if (!pinnedSide) await shell.collapsePanel(area);
           return;
@@ -482,7 +483,13 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           sizedAreas.add(area);
         }
       } catch (error) {
+        if (pinnedSide === id) pinnedSide = '';
+        if (previewSide === id) {
+          previewSide = '';
+          document.body.classList.remove('plain-side-peek');
+        }
         console.error(`Singularity: open ${name}`, error);
+        if (!preview) messages.error(`Could not open ${name}: ${error.message}`);
       }
     };
     const openFolder = async () => {
@@ -542,7 +549,6 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       'window-close': () => window.plainEditorDesktop?.windowAction('close'),
       files: () => openSide('files'),
       extensions: () => openSide('extensions'),
-      'extension-views': () => chrome.toggleExtensionMenu(),
       browser: () => execute('plain-editor.browser'),
       development: () => execute('plain-editor.development'),
       'source-control': async () => {
@@ -762,7 +768,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           plugins: container.get(HostedPluginSupport),
           contextKeys: container.get(ContextKeyService),
           getOpenPane: () => focusMode || !preferences.get(SIDEBAR_VISIBLE, true) ? '' : pinnedSide || previewSide,
-          openView: id => { closeMenu(); return openSide(id); }, icon,
+          openView: id => { closeMenu(); return openSide(id); }, openFolder, messages, icon,
           openExtensionSettings: async id => {
             const deployed = plugins.plugins.map(metadata => plugins.getPlugin(metadata.model.id)).filter(Boolean);
             const owner = extensionViewOwner(id, deployed);
@@ -865,7 +871,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           const control = event.target.closest('[data-plain-action]');
           if (!control) return;
           const action = control.dataset.plainAction;
-          if (!['menu', 'open', 'extension-views'].includes(action)) closeMenu();
+          if (!['menu', 'open'].includes(action)) closeMenu();
           actions[action]?.(control);
         };
         header.addEventListener('click', handleControls);

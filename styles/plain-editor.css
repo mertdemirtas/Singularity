@@ -129,7 +129,16 @@ body.plain-editor-ready #theia-main-content-panel .lm-TabBar-tab,body.plain-edit
 body.plain-editor-ready #theia-main-content-panel .plain-window-tabs .theia-tabBar-tab-row{box-sizing:border-box;padding-right:var(--plain-window-space)}
 #plain-header{position:fixed;inset:40px auto 0 0;width:48px;height:auto;display:flex;flex-direction:column;gap:8px;align-items:center;padding:12px 6px 8px;border:0;-webkit-app-region:no-drag;user-select:none;overflow:visible}
 #plain-header .plain-rail-tools,#plain-header .plain-rail-footer{display:flex;flex-direction:column;align-items:center;gap:4px}
-#plain-header .plain-rail-footer{margin-top:auto}
+#plain-header .plain-rail-tools{align-self:stretch;flex:1;min-height:0;margin:0 -6px;padding:0 6px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+#plain-header .plain-rail-footer{flex:none;margin-top:auto}
+#plain-header .plain-rail-tools>.plain-button{flex:none}
+#plain-header .plain-rail-tools .plain-button:focus-visible{outline-offset:-2px}
+#plain-extension-icons{display:flex;flex:none;flex-direction:column;align-items:center;gap:9px}
+#plain-extension-icons:empty{display:none}
+.plain-extension-view-empty{position:absolute;inset:78px 0 0;padding:16px;background:var(--theia-sideBar-background);color:var(--theia-descriptionForeground);font:13px/1.5 var(--theia-ui-font-family);overflow:auto}
+.plain-extension-view-empty[hidden]{display:none}
+.plain-extension-view-empty p{margin:0 0 16px}
+.plain-extension-view-empty button{display:block;margin:8px 0;max-width:100%;font:inherit}
 #plain-header .plain-open-control{position:static;display:flex}
 .plain-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:30px;height:30px;padding:0 6px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--theia-foreground);font:13px var(--theia-ui-font-family);cursor:pointer}
 .plain-button:hover,.plain-button[aria-expanded='true'],.plain-button[aria-pressed='true']{background:var(--theia-toolbar-hoverBackground)}
@@ -155,15 +164,8 @@ body.plain-editor-ready #theia-main-content-panel .plain-window-tabs .theia-tabB
 .plain-empty-titlebar>span{color:var(--theia-descriptionForeground);font-size:12px}
 .plain-empty-actions{display:flex;align-items:center;gap:3px;-webkit-app-region:no-drag}
 .plain-view-icon{display:inline-block!important;flex:none;width:20px;height:20px;line-height:20px;font-size:20px}
-.plain-view-icon.theia-plugin-view-container{background-color:currentColor}
-#plain-extension-views-menu,#plain-open-menu,#plain-menu{position:fixed;z-index:200;top:auto;left:auto;right:auto;min-width:220px;max-width:min(300px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;padding:6px;border:1px solid var(--theia-panel-border);border-radius:10px;background:var(--theia-menu-background,var(--theia-sideBar-background));box-shadow:0 10px 32px #0003}
-#plain-extension-views-menu[hidden]{display:none}
-#plain-extension-views-menu .plain-menu-empty{padding:10px;color:var(--theia-descriptionForeground);font:12px/1.4 var(--theia-ui-font-family)}
-#plain-extension-views-menu{width:max-content;min-width:160px;max-width:min(360px,calc(100vw - 16px))}
-#plain-extension-views-menu .plain-extension-view-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:6px;background:transparent;color:var(--theia-foreground);text-align:left;font:13px var(--theia-ui-font-family);cursor:pointer}
-#plain-extension-views-menu .plain-extension-view-item>span:last-child{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-#plain-extension-views-menu .plain-extension-view-item:hover{background:var(--theia-list-hoverBackground)}
-#plain-extension-views-menu .plain-extension-view-item:focus-visible{outline:2px solid var(--theia-focusBorder);outline-offset:-2px}
+#plain-extension-icons .plain-view-icon.theia-plugin-view-container{background-color:currentColor;mask-size:contain;-webkit-mask-size:contain}
+#plain-open-menu,#plain-menu{position:fixed;z-index:200;top:auto;left:auto;right:auto;min-width:220px;max-width:min(300px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;padding:6px;border:1px solid var(--theia-panel-border);border-radius:10px;background:var(--theia-menu-background,var(--theia-sideBar-background));box-shadow:0 10px 32px #0003}
 #plain-extension-view-context{position:fixed;z-index:210;min-width:190px;padding:6px;border:1px solid var(--theia-panel-border);border-radius:8px;background:var(--theia-menu-background,var(--theia-sideBar-background));box-shadow:0 8px 24px #0003}
 #plain-extension-view-context[hidden]{display:none}
 #plain-extension-view-context button{display:block;width:100%;padding:8px 10px;border:0;border-radius:5px;background:transparent;color:var(--theia-foreground);font:13px var(--theia-ui-font-family);text-align:left;cursor:pointer}

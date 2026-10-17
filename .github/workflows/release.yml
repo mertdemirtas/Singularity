@@ -75,6 +75,7 @@ jobs:
           const { pathToFileURL } = require('node:url');
           const puppeteer = require(path.join(process.cwd(), 'node_modules/puppeteer'));
           const root = process.cwd(), release = path.join(root, 'release');
+          const releaseVersion = require(path.join(root, 'package.json')).version;
           const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'Singularity Install '));
           const artifact = path.join(process.env.RUNNER_TEMP, 'release-check');
           fs.mkdirSync(artifact, { recursive: true });
@@ -132,7 +133,7 @@ jobs:
             assert.match(execFileSync(runtime, [npm, '--version'], { encoding: 'utf8' }), /^\d+\./);
             run(runtime, ['-e', "for(const name of ['node-pty','keytar','@parcel/watcher','drivelist']) require(name);console.log('Packaged native modules loaded')"], { cwd: path.join(resources, 'app') });
             // The previous-version fixture differs only in its version and feed.
-            // Actual signed 0.1.0 archives/installers are the update targets.
+            // The archives/installers built in this run are the update targets.
             server = http.createServer((request, response) => {
               const file = path.basename(decodeURIComponent(request.url.split('?')[0]));
               const target = path.join(release, file);
@@ -206,7 +207,7 @@ jobs:
               }
               return state;
             });
-            assert.equal(available.phase, 'available', JSON.stringify(available)); assert.equal(available.availableVersion, '0.1.0');
+            assert.equal(available.phase, 'available', JSON.stringify(available)); assert.equal(available.availableVersion, releaseVersion);
             await page.click('[data-plain-action="menu"]');
             await page.click('[data-plain-action="settings"]');
             await page.waitForSelector('[data-settings-action="install-update"]', { visible: true });
@@ -214,7 +215,7 @@ jobs:
             await until(() => {
               // NSIS removes the old tree before extracting the new one. The
               // version file may be absent or partially written during that gap.
-              try { return JSON.parse(fs.readFileSync(packageFile)).version === '0.1.0'; }
+              try { return JSON.parse(fs.readFileSync(packageFile)).version === releaseVersion; }
               catch (error) {
                 if (error.code === 'ENOENT' || error instanceof SyntaxError) return false;
                 throw error;
@@ -252,7 +253,7 @@ jobs:
               const shell = caches.find(value => typeof value?.mainPanel?.onDidChangeCurrent === 'function');
               return shell && [...shell.mainPanel.widgets()].some(widget => widget.editor?.document?.getText().includes('UNSAVED UPDATE RECOVERY 🪐'));
             }, { timeout: 120000 });
-            assert.equal((await page.evaluate(() => plainEditorDesktop.updates())).version, '0.1.0');
+            assert.equal((await page.evaluate(() => plainEditorDesktop.updates())).version, releaseVersion);
             assert(fs.readFileSync(filename, 'utf8').includes('saved shortcut'));
             await page.screenshot({ path: path.join(artifact, 'updated.png') });
             console.log(`Installed ${process.platform}/${process.arch}: bundled Node/npm, native modules, fonts, save shortcut, Python terminal, GitHub-format update, restart, and unsaved recovery passed.`);

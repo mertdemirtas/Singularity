@@ -4,13 +4,13 @@ const SIDEBAR_VISIBLE = 'plainEditor.sidebarVisible';
 const extensionViewItems = require('./extension-view-items');
 const managed = widget => widget.id === 'explorer-view-container' || widget.id === 'scm-view-container' || widget.id === 'vsx-extensions-view-container' || widget.id.startsWith('plugin-view-container:');
 
-module.exports = function createChromeLayout({ shell, preferences, header, titlebar, navigation, viewRegistry, plugins, contextKeys, getOpenPane, openView, openExtensionSettings, icon }) {
+module.exports = function createChromeLayout({ shell, preferences, header, titlebar, navigation, viewRegistry, plugins, contextKeys, getOpenPane, openView, openExtensionSettings, openFolder, messages, icon }) {
   let queued = false;
   let moving = false;
   let moveAgain = false;
-  let menuTimer;
-  const menu = header.querySelector('#plain-extension-views-menu');
-  const overflow = header.querySelector('[data-plain-action="extension-views"]');
+  const rail = header.querySelector('#plain-extension-icons');
+  const controls = new Map();
+  let openRequest = 0;
   let iconSignature = '';
   const contextMenu = document.createElement('div');
   contextMenu.id = 'plain-extension-view-context';
@@ -21,10 +21,9 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
   contextMenu.append(settingsButton); header.append(contextMenu);
   let settingsView;
   settingsButton.onclick = event => {
-    event.stopPropagation(); closeExtensionMenu();
+    event.stopPropagation(); closeExtensionContextMenu();
     Promise.resolve(openExtensionSettings(settingsView)).catch(error => console.error('Singularity: extension settings', error));
   };
-  contextMenu.addEventListener('pointerenter', () => clearTimeout(menuTimer));
 
   const area = () => 'left';
   const positionPopover = (popup, anchor) => {
@@ -33,82 +32,98 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
     const width = popup.offsetWidth;
     const height = popup.offsetHeight;
     const x = rect.right + 8;
-    const y = popup === menu ? rect.bottom - height : rect.top;
+    const y = rect.top;
     popup.style.left = `${Math.max(8, Math.min(x, window.innerWidth - width - 8))}px`;
     popup.style.top = `${Math.max(8, Math.min(y, window.innerHeight - height - 8))}px`;
     popup.style.right = 'auto';
   };
 
-  const closeExtensionMenu = () => {
-    clearTimeout(menuTimer);
-    menu.hidden = true;
-    contextMenu.hidden = true;
-    overflow.setAttribute('aria-expanded', 'false');
-  };
-  const showExtensionMenu = () => {
-    refreshIcons();
-    clearTimeout(menuTimer);
-    menu.hidden = false;
-    overflow.setAttribute('aria-expanded', 'true');
-    positionPopover(menu, overflow);
-  };
-  overflow.addEventListener('pointerenter', event => {
-    if (event.pointerType !== 'touch') menuTimer = setTimeout(showExtensionMenu, 150);
-  });
-  overflow.addEventListener('pointerleave', () => { clearTimeout(menuTimer); menuTimer = setTimeout(closeExtensionMenu, 260); });
-  menu.addEventListener('pointerenter', () => clearTimeout(menuTimer));
-  menu.addEventListener('pointerleave', () => { if (contextMenu.hidden) menuTimer = setTimeout(closeExtensionMenu, 260); });
+  const closeExtensionContextMenu = () => { contextMenu.hidden = true; };
+  header.querySelector('.plain-rail-tools').addEventListener('scroll', closeExtensionContextMenu);
 
   const refreshIcons = () => {
     const views = extensionViewItems(viewRegistry);
     const signature = JSON.stringify(views);
     if (signature === iconSignature) return;
     iconSignature = signature;
-    menu.replaceChildren();
-    for (const view of views) {
-        const control = document.createElement('button');
+    const visible = new Set(views.map(view => view.id));
+    for (const [id, control] of controls) {
+      if (!visible.has(id)) {
+        control.remove(); controls.delete(id);
+        if (settingsView === id) closeExtensionContextMenu();
+      }
+    }
+    for (const [index, view] of views.entries()) {
+      let control = controls.get(view.id);
+      if (!control) {
+        control = document.createElement('button');
         control.type = 'button';
-        control.className = 'plain-extension-view-item';
+        control.className = 'plain-button plain-icon-only plain-extension-view-item';
         control.dataset.plainView = `plugin-view-container:${view.id}`;
-        control.title = view.label;
-        control.setAttribute('aria-label', view.label);
-        control.setAttribute('role', 'menuitem');
-        const glyph = document.createElement('span');
-        glyph.className = `plain-view-icon ${view.iconClass}`;
-        if (!view.iconClass) glyph.innerHTML = icon('extensions');
-        control.append(glyph);
-        const label = document.createElement('span');
-        label.textContent = view.label;
-        control.append(label);
+        control.setAttribute('aria-pressed', 'false');
+        control.append(document.createElement('span'));
         control.addEventListener('click', async event => {
-          event.stopPropagation(); closeExtensionMenu();
+          event.stopPropagation(); closeExtensionContextMenu();
+          const request = ++openRequest;
+          control.setAttribute('aria-busy', 'true');
           try {
+            // A container can have only conditional views. Waiting for a visible
+            // child to activate its extension leaves those containers empty.
+            await plugins.activateByViewContainer(view.id);
+            if (request !== openRequest) return;
             const widget = await viewRegistry.openViewContainer(view.id);
-            if (widget) await openView(widget.id);
-          } catch (error) { console.error('Singularity: open extension view', error); }
+            if (!widget || request !== openRequest) return;
+            const parts = widget.getParts();
+            if (parts.every(part => part.isHidden)) {
+              const available = parts.find(part => viewRegistry.isViewVisible(part.wrapped.options.viewId));
+              if (available) { available.show(); available.collapsed = false; }
+            }
+            await openView(widget.id);
+            schedule();
+          } catch (error) {
+            console.error('Singularity: open extension view', error);
+            messages.error(`Could not open ${view.label}: ${error.message}`);
+          } finally { control.removeAttribute('aria-busy'); }
         });
         control.addEventListener('contextmenu', event => {
-          event.preventDefault(); event.stopPropagation(); clearTimeout(menuTimer);
+          event.preventDefault(); event.stopPropagation();
           settingsView = view.id;
           contextMenu.hidden = false;
-          const width = contextMenu.offsetWidth, height = contextMenu.offsetHeight;
-          contextMenu.style.left = `${Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))}px`;
-          contextMenu.style.top = `${Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))}px`;
+          positionPopover(contextMenu, control);
           settingsButton.focus();
         });
-        menu.append(control);
+        controls.set(view.id, control);
+      }
+      control.title = view.label;
+      control.setAttribute('aria-label', view.label);
+      const glyph = control.firstElementChild;
+      const className = `plain-view-icon ${view.iconClass}`;
+      if (glyph.className !== className) {
+        glyph.className = className;
+        glyph.innerHTML = view.iconClass ? '' : icon('extensions');
+        glyph.setAttribute('aria-hidden', 'true');
+      }
+      // Keep existing buttons in place so plugin refreshes preserve focus and
+      // the scroll position while adding or removing other contributions.
+      if (rail.children[index] !== control) rail.insertBefore(control, rail.children[index] || null);
     }
-    overflow.hidden = false;
-    overflow.title = `Extension views (${views.length})`;
-    overflow.setAttribute('aria-label', overflow.title);
-    if (!views.length) {
-      const empty = document.createElement('div');
-      empty.className = 'plain-menu-empty';
-      empty.textContent = 'No extension sidebar views';
-      menu.append(empty);
-    }
-    if (!menu.hidden) positionPopover(menu, overflow);
   };
+
+  // Some extensions intentionally hide every view until a folder, sign-in or
+  // other setup step is available. Explain that state without overriding when clauses.
+  const emptyView = document.createElement('div');
+  emptyView.className = 'plain-extension-view-empty';
+  emptyView.hidden = true;
+  emptyView.setAttribute('role', 'status');
+  const emptyText = document.createElement('p');
+  const folderButton = document.createElement('button');
+  folderButton.type = 'button'; folderButton.className = 'theia-button'; folderButton.textContent = 'Open Folder';
+  folderButton.onclick = () => openFolder().catch(error => messages.error(error.message));
+  const extensionSettings = document.createElement('button');
+  extensionSettings.type = 'button'; extensionSettings.className = 'theia-button secondary'; extensionSettings.textContent = 'Extension settings';
+  extensionSettings.onclick = () => Promise.resolve(openExtensionSettings(emptyView.dataset.containerId)).catch(error => messages.error(error.message));
+  emptyView.append(emptyText, folderButton, extensionSettings);
+  shell.leftPanelHandler.container.node.append(emptyView);
 
   const syncTitlebar = () => {
     const rows = [...shell.mainPanel.tabBars()].filter(bar => bar.titles.length > 0).map(bar => bar.node).filter(node => node.getBoundingClientRect().width > 0);
@@ -127,6 +142,13 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
     titlebar.classList.toggle('plain-compact-titlebar', rows.length > 0);
     const handler = shell[area() === 'right' ? 'rightPanelHandler' : 'leftPanelHandler'];
     const selected = shell.isExpanded(area()) ? handler.tabBar.currentTitle?.owner.id : '';
+    const selectedWidget = selected && shell.getWidgetById(selected);
+    const noViews = selected?.startsWith('plugin-view-container:') && selectedWidget?.getParts().every(part => part.isHidden);
+    emptyView.hidden = !noViews;
+    if (noViews) {
+      emptyView.dataset.containerId = viewRegistry.getViewContainerId(selectedWidget);
+      emptyText.textContent = `${selectedWidget.title.label} has no views available in the current context. Open a folder or check this extension’s setup requirements.`;
+    }
     for (const sideHandler of [shell.leftPanelHandler, shell.rightPanelHandler]) {
       const open = sideHandler.container.node.querySelector('.plain-files-open');
       if (open) open.hidden = sideHandler.tabBar.currentTitle?.owner.id !== 'explorer-view-container';
@@ -199,7 +221,7 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
       handler.container.fit();
     }
     shell.fit(); shell.update();
-    closeExtensionMenu();
+    closeExtensionContextMenu();
     migrateViews().catch(error => console.error('Singularity: sidebar layout', error));
     schedule();
   };
@@ -218,6 +240,6 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
   window.addEventListener('resize', schedule);
   preferences.onPreferenceChanged(change => { if (change.preferenceName === SIDEBAR_VISIBLE) applyLayout(); });
   applyLayout();
-  return { applyLayout, positionPopover, closeExtensionMenu, toggleExtensionMenu: () => menu.hidden ? showExtensionMenu() : closeExtensionMenu(), syncTitlebar };
+  return { applyLayout, positionPopover, closeExtensionContextMenu, syncTitlebar };
 };
 module.exports.SIDEBAR_VISIBLE = SIDEBAR_VISIBLE;

@@ -74,7 +74,7 @@ class BrowserWidget extends BaseWidget {
   syncBounds() {
     if (!this.ready || this.isDisposed) return;
     const rect = this.content.getBoundingClientRect();
-    const overlay = [...document.querySelectorAll('dialog[open], .dialogBlock, #plain-menu:not([hidden]), #plain-open-menu:not([hidden]), #plain-extension-views-menu:not([hidden]), #plain-extension-view-context:not([hidden])')]
+    const overlay = [...document.querySelectorAll('dialog[open], .dialogBlock, #plain-menu:not([hidden]), #plain-open-menu:not([hidden]), #plain-extension-view-context:not([hidden])')]
       .some(node => node.getBoundingClientRect().width > 0);
     this.request('bounds', { bounds: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
       visible: this.url !== 'about:blank' && this.isVisible && !overlay }).catch(() => {});

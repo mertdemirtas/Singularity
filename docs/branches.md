@@ -1,39 +1,70 @@
-# Branches and platform compatibility
+# Development guide
 
-## Recommended structure
+For normal installation, use the [installation guide](releases.md).
 
-- `main`: stable releases that have passed the native platform checks.
-- `development`: the shared application code and integration branch.
-- `windows`: Windows compatibility work, created from `development`.
-- `macos`: macOS compatibility work, created from `development`.
+## Branches
 
-Treat the OS branches as working branches, not permanent copies of the product.
-Share portability fixes between them, then merge reviewed compatibility changes
-into `development` once their checks pass. Promote a tested version to `main`.
-Future fixes should use short branches from `development` and run the same OS
-matrix. Keep platform-specific code in small runtime adapters rather than
-maintaining three separate implementations of the editor.
+- `main`: stable releases.
+- `development`: shared development and integration.
+- `windows`: Windows compatibility work.
+- `macos`: macOS compatibility work.
 
-The verified compatibility work is integrated into `development`. Shared
-features, including document recovery, continue there. The OS branches remain
-available for platform-specific work; `main` remains the release branch.
+Start shared work from `development`. Merge platform fixes into it before promoting a verified version to `main`.
 
-## Native checks
+## Build from source
 
-The compatibility workflow builds and launches the existing app on Linux x64,
-Windows x64, Apple Silicon macOS, and Intel macOS. It checks native Node modules,
-font discovery, a file whose path contains spaces, the OS save shortcut, and
-the Python runner's terminal output. Recovery checks force two crashes and
-relaunch the app, verifying named files, empty documents, untitled notes,
-Unicode and CRLF text, unchanged originals, Save As, and discard cleanup.
-Logs and screenshots are retained as CI artifacts. No local files from
-`tests/` are committed or uploaded.
+Use Git and Node.js 24.21.0 with npm. Install dependencies on the target operating system; do not copy `node_modules` between systems or architectures.
 
-Install dependencies on the target OS. Do not copy `node_modules` between OSes
-or architectures. Theia runs with the Node executable that installed its native
-dependencies; Electron's renderer remains sandboxed.
+For platform prerequisites and setup commands, see [Windows](windows.md) or [macOS](macos.md). On Ubuntu, install the build tools first:
 
-These branches provide source installation with `npm run setup` and
-`npm run desktop`. Signed installers, Apple notarization, and Windows signing
-certificates are separate release work; native checks do not test signed
-distribution packages.
+```sh
+sudo apt-get install -y git python3 build-essential libsecret-1-dev libx11-dev libxkbfile-dev libkrb5-dev
+```
+
+Then clone, build, and launch:
+
+```sh
+git clone --branch development https://github.com/mertdemirtas/Singularity.git
+cd Singularity
+npm run setup
+npm run desktop
+```
+
+If the Linux launcher reports a sandbox-helper permission error, run these commands from the project folder, then launch again:
+
+```sh
+sudo chown root:root node_modules/electron/dist/chrome-sandbox
+sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+```
+
+Keep Electron sandboxing enabled.
+
+## Useful commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run desktop` | Launch the desktop app |
+| `npm run build` | Rebuild for development |
+| `npm run build:release` | Create an optimized build |
+| `npm run check` | Check Theia dependency versions |
+| `npm run package:release` | Build the current system's installer into `release/` |
+| `npm run package:dir` | Build an unpacked app for debugging |
+
+CI checks Linux x64, Windows x64, and macOS on Intel and Apple Silicon. Local test files, dependencies, downloaded extensions, and generated builds stay excluded from Git.
+
+## Publish a release
+
+1. Integrate changes into `development`. Update the version in `package.json` and `package-lock.json`, the release notes, and installation examples.
+2. Run **Installers and updates** with publishing disabled. All native installation, update, restart, and recovery checks must pass.
+3. Fast-forward `main` to that verified commit.
+4. Run **Publish verified installers** on `main` with the successful run's numeric ID. It verifies the commit and checksums, creates the version tag, and publishes the tested installers.
+
+Publish fixes under a higher version; do not replace an existing release's files.
+
+### macOS update signing
+
+GitHub Actions secret `SPARKLE_PRIVATE_KEY` holds the Ed25519 private key. Its public key is stored in `assets/update-key.json`.
+
+Keep a secure backup of the private key. Existing Mac installations need it to trust future updates. The maintainer's local backup is `~/.config/singularity-release-keys/sparkle-private.pem`, with owner-only permissions. Never commit or log the private key, and do not replace the public key without planning key rotation.
+
+Sparkle update signatures are separate from Apple Developer ID signing and notarization. The current Windows and macOS installers are not publisher-signed.
