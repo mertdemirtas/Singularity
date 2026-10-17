@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
+const { gzipSync } = require('node:zlib');
 
 const root = path.resolve(__dirname, '..');
 const bundlePath = path.join(root, 'lib/frontend/bundle.css');
@@ -20,6 +21,13 @@ const bundle = fs.readFileSync(bundlePath, 'utf8');
 if (!bundle.includes(marker)) {
   // Keep the app theme together before the generated Theia styles.
   fs.writeFileSync(bundlePath, `${marker}\n${fs.readFileSync(themePath, 'utf8')}\n${bundle}`);
+}
+// Our theme changes the generated CSS. Development builds can also leave old
+// production gzip files behind. Every served copy must match this build.
+for (const asset of fs.readdirSync(path.dirname(bundlePath))) {
+  if (!/\.(?:js|css)$/.test(asset)) continue;
+  const filename = path.join(path.dirname(bundlePath), asset);
+  fs.writeFileSync(`${filename}.gz`, gzipSync(fs.readFileSync(filename)));
 }
 
 const version = filename => createHash('sha256').update(fs.readFileSync(filename)).digest('hex').slice(0, 12);

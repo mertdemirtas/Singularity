@@ -1,4 +1,6 @@
 /* Quiet document layout; Theia's split panels retain control of pane sizes. */
+/* The workbench is ready before this otherwise 800 ms fade finishes. */
+.theia-preload{transition-duration:0s!important}
 body.plain-editor-ready #theia-top-panel{visibility:hidden!important}
 body.plain-editor-ready #theia-statusBar{display:none!important}
 body.plain-editor-ready #theia-left-content-panel.theia-mod-collapsed,body.plain-editor-ready #theia-right-content-panel.theia-mod-collapsed{min-width:0!important;max-width:0!important}
@@ -133,8 +135,12 @@ body.plain-editor-ready #theia-main-content-panel .plain-window-tabs .theia-tabB
 #plain-header .plain-rail-footer{flex:none;margin-top:auto}
 #plain-header .plain-rail-tools>.plain-button{flex:none}
 #plain-header .plain-rail-tools .plain-button:focus-visible{outline-offset:-2px}
-#plain-extension-icons{display:flex;flex:none;flex-direction:column;align-items:center;gap:9px}
-#plain-extension-icons:empty{display:none}
+.plain-rail-item{position:relative;flex:none;width:34px;height:34px}
+.plain-rail-item[hidden]{display:none!important}
+.plain-rail-item.plain-dragging{opacity:.4}
+.plain-rail-item.plain-drop-before::before,.plain-rail-item.plain-drop-after::after{content:'';position:absolute;left:0;right:0;border-top:2px solid var(--theia-focusBorder);pointer-events:none}
+.plain-rail-item.plain-drop-before::before{top:-3px}
+.plain-rail-item.plain-drop-after::after{bottom:-3px}
 .plain-extension-view-empty{position:absolute;inset:78px 0 0;padding:16px;background:var(--theia-sideBar-background);color:var(--theia-descriptionForeground);font:13px/1.5 var(--theia-ui-font-family);overflow:auto}
 .plain-extension-view-empty[hidden]{display:none}
 .plain-extension-view-empty p{margin:0 0 16px}
@@ -164,10 +170,14 @@ body.plain-editor-ready #theia-main-content-panel .plain-window-tabs .theia-tabB
 .plain-empty-titlebar>span{color:var(--theia-descriptionForeground);font-size:12px}
 .plain-empty-actions{display:flex;align-items:center;gap:3px;-webkit-app-region:no-drag}
 .plain-view-icon{display:inline-block!important;flex:none;width:20px;height:20px;line-height:20px;font-size:20px}
-#plain-extension-icons .plain-view-icon.theia-plugin-view-container{background-color:currentColor;mask-size:contain;-webkit-mask-size:contain}
+#plain-header .plain-view-icon.theia-plugin-view-container{background-color:currentColor;mask-size:contain;-webkit-mask-size:contain}
 #plain-open-menu,#plain-menu{position:fixed;z-index:200;top:auto;left:auto;right:auto;min-width:220px;max-width:min(300px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;padding:6px;border:1px solid var(--theia-panel-border);border-radius:10px;background:var(--theia-menu-background,var(--theia-sideBar-background));box-shadow:0 10px 32px #0003}
 #plain-extension-view-context{position:fixed;z-index:210;min-width:190px;padding:6px;border:1px solid var(--theia-panel-border);border-radius:8px;background:var(--theia-menu-background,var(--theia-sideBar-background));box-shadow:0 8px 24px #0003}
 #plain-extension-view-context[hidden]{display:none}
+#plain-extension-view-context{max-height:calc(100vh - 16px);overflow:auto;font:13px/1.4 var(--theia-ui-font-family)}
+#plain-extension-view-context hr{border:0;border-top:1px solid var(--theia-panel-border);margin:5px 0}
+#plain-extension-view-context [role='menuitemcheckbox']{padding-left:28px;position:relative}
+#plain-extension-view-context [aria-checked='true']::before{content:'✓';position:absolute;left:8px}
 #plain-extension-view-context button{display:block;width:100%;padding:8px 10px;border:0;border-radius:5px;background:transparent;color:var(--theia-foreground);font:13px var(--theia-ui-font-family);text-align:left;cursor:pointer}
 #plain-extension-view-context button:hover{background:var(--theia-list-hoverBackground)}
 .plain-browser{display:flex;flex-direction:column;background:var(--theia-editor-background);color:var(--theia-foreground);font:13px var(--theia-ui-font-family)}

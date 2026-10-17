@@ -25,6 +25,12 @@ A simple desktop text editor for notes and code, available on Linux, Windows, an
 
 Auto-save is enabled when you switch away from the app. Use **Save As** to name a new file or keep a **Recovered** document.
 
+Drag sidebar icons to reorder them. Right-click an icon to hide it, or right-click empty sidebar space to restore icons and reset the layout.
+
+To choose a GitHub repository, use **Files → Open → Clone Repository** and select GitHub. The GitHub Pull Requests extension shows pull requests and issues for the repository folder you have open. Its optional Copilot chat attachments are unavailable in Singularity.
+
+Large text files use a lighter editing mode: automatic Git gutter diffs and extension document processing are disabled when Monaco marks a file as large (normally above 20 MB or 300,000 lines). Editing, saving, and crash recovery remain available. Very wide files open without word wrap.
+
 ## Keyboard shortcuts
 
 Use **Cmd** instead of **Ctrl** on macOS.

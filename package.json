@@ -55,6 +55,8 @@
   "theiaPlugins": {
     "vscode.git": "https://open-vsx.org/api/vscode/git/1.95.3/file/vscode.git-1.95.3.vsix",
     "vscode.git-base": "https://open-vsx.org/api/vscode/git-base/1.95.3/file/vscode.git-base-1.95.3.vsix",
+    "vscode.github": "https://open-vsx.org/api/vscode/github/1.95.3/file/vscode.github-1.95.3.vsix",
+    "vscode.github-authentication": "https://open-vsx.org/api/vscode/github-authentication/1.95.3/file/vscode.github-authentication-1.95.3.vsix",
     "vscode.python": "https://open-vsx.org/api/vscode/python/1.95.3/file/vscode.python-1.95.3.vsix",
     "vscode.markdown": "https://open-vsx.org/api/vscode/markdown/1.95.3/file/vscode.markdown-1.95.3.vsix",
     "vscode.markdown-language-features": "https://open-vsx.org/api/vscode/markdown-language-features/1.95.3/file/vscode.markdown-language-features-1.95.3.vsix",

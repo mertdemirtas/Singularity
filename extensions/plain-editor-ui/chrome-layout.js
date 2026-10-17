@@ -2,29 +2,23 @@
 
 const SIDEBAR_VISIBLE = 'plainEditor.sidebarVisible';
 const extensionViewItems = require('./extension-view-items');
+const { PreferenceScope } = require('@theia/core/lib/common/preferences/preference-scope');
+const { Sidebar } = require('./sidebar');
 const managed = widget => widget.id === 'explorer-view-container' || widget.id === 'scm-view-container' || widget.id === 'vsx-extensions-view-container' || widget.id.startsWith('plugin-view-container:');
 
-module.exports = function createChromeLayout({ shell, preferences, header, titlebar, navigation, viewRegistry, plugins, contextKeys, getOpenPane, openView, openExtensionSettings, openFolder, messages, icon }) {
+module.exports = function createChromeLayout({ shell, preferences, header, titlebar, navigation, viewRegistry, plugins, contextKeys, getOpenPane, openView, openExtensionSettings, openFolder, openSettings, onHideSidebarItem, messages, icon }) {
   let queued = false;
+  let iconsDirty = true, geometryDirty = true, paneDirty = true;
+  let containerCount = -1, viewCount = -1;
+  let containerContexts = new Set(), viewContexts = new Set();
   let moving = false;
   let moveAgain = false;
-  const rail = header.querySelector('#plain-extension-icons');
+  const rail = document.createDocumentFragment();
   const controls = new Map();
   let openRequest = 0;
   let iconSignature = '';
-  const contextMenu = document.createElement('div');
-  contextMenu.id = 'plain-extension-view-context';
-  contextMenu.setAttribute('role', 'menu');
-  contextMenu.hidden = true;
-  const settingsButton = document.createElement('button');
-  settingsButton.type = 'button'; settingsButton.textContent = 'Extension settings…'; settingsButton.setAttribute('role', 'menuitem');
-  contextMenu.append(settingsButton); header.append(contextMenu);
-  let settingsView;
-  settingsButton.onclick = event => {
-    event.stopPropagation(); closeExtensionContextMenu();
-    Promise.resolve(openExtensionSettings(settingsView)).catch(error => console.error('Singularity: extension settings', error));
-  };
-
+  const sidebar = new Sidebar({ header, preferences, messages, openSettings, openExtensionSettings,
+    savePreference: (key, value) => preferences.set(key, value, PreferenceScope.User), onHide: onHideSidebarItem });
   const area = () => 'left';
   const positionPopover = (popup, anchor) => {
     if (popup.hidden) return;
@@ -38,10 +32,12 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
     popup.style.right = 'auto';
   };
 
-  const closeExtensionContextMenu = () => { contextMenu.hidden = true; };
-  header.querySelector('.plain-rail-tools').addEventListener('scroll', closeExtensionContextMenu);
+  const closeExtensionContextMenu = () => sidebar.closeMenu();
 
   const refreshIcons = () => {
+    containerCount = viewRegistry.viewContainers.size; viewCount = viewRegistry.views.size;
+    containerContexts = new Set([...viewRegistry.viewContainerClauseContexts.values()].flatMap(keys => [...keys]));
+    viewContexts = new Set([...viewRegistry.viewClauseContexts.values()].flatMap(keys => [...keys]));
     const views = extensionViewItems(viewRegistry);
     const signature = JSON.stringify(views);
     if (signature === iconSignature) return;
@@ -49,11 +45,10 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
     const visible = new Set(views.map(view => view.id));
     for (const [id, control] of controls) {
       if (!visible.has(id)) {
-        control.remove(); controls.delete(id);
-        if (settingsView === id) closeExtensionContextMenu();
+        sidebar.unregister(id); controls.delete(id); closeExtensionContextMenu();
       }
     }
-    for (const [index, view] of views.entries()) {
+    for (const view of views) {
       let control = controls.get(view.id);
       if (!control) {
         control = document.createElement('button');
@@ -85,13 +80,6 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
             messages.error(`Could not open ${view.label}: ${error.message}`);
           } finally { control.removeAttribute('aria-busy'); }
         });
-        control.addEventListener('contextmenu', event => {
-          event.preventDefault(); event.stopPropagation();
-          settingsView = view.id;
-          contextMenu.hidden = false;
-          positionPopover(contextMenu, control);
-          settingsButton.focus();
-        });
         controls.set(view.id, control);
       }
       control.title = view.label;
@@ -103,10 +91,10 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
         glyph.innerHTML = view.iconClass ? '' : icon('extensions');
         glyph.setAttribute('aria-hidden', 'true');
       }
-      // Keep existing buttons in place so plugin refreshes preserve focus and
-      // the scroll position while adding or removing other contributions.
-      if (rail.children[index] !== control) rail.insertBefore(control, rail.children[index] || null);
+      if (!sidebar.items.has(view.id)) rail.append(control);
+      sidebar.register(view.id, control, view.label, true);
     }
+    sidebar.refresh();
   };
 
   // Some extensions intentionally hide every view until a folder, sign-in or
@@ -125,21 +113,23 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
   emptyView.append(emptyText, folderButton, extensionSettings);
   shell.leftPanelHandler.container.node.append(emptyView);
 
-  const syncTitlebar = () => {
-    const rows = [...shell.mainPanel.tabBars()].filter(bar => bar.titles.length > 0).map(bar => bar.node).filter(node => node.getBoundingClientRect().width > 0);
+  const syncGeometry = () => {
+    const rows = [...shell.mainPanel.tabBars()].filter(bar => bar.titles.length > 0)
+      .map(bar => ({ node: bar.node, rect: bar.node.getBoundingClientRect() })).filter(row => row.rect.width > 0);
     const top = shell.mainPanel.node.getBoundingClientRect().top;
-    const contentRight = window.innerWidth;
-    const navigationRight = navigation.getBoundingClientRect().right;
-    for (const row of rows) {
-      const rect = row.getBoundingClientRect();
-      row.classList.toggle('plain-window-tabs', Math.abs(rect.top - top) < 2 && Math.abs(rect.right - contentRight) < 2);
-      const historySpace = Math.abs(rect.top - top) < 2 ? Math.max(0, navigationRight - rect.left) : 0;
-      row.style.setProperty('--plain-history-space', `${historySpace}px`);
+    const navigationRight = rows.length ? navigation.getBoundingClientRect().right : 0;
+    // Read geometry together, then write only values that actually changed.
+    for (const { node, rect } of rows) {
+      const isTop = Math.abs(rect.top - top) < 2;
+      node.classList.toggle('plain-window-tabs', isTop && Math.abs(rect.right - innerWidth) < 2);
+      const space = `${isTop ? Math.max(0, navigationRight - rect.left) : 0}px`;
+      if (node.style.getPropertyValue('--plain-history-space') !== space) node.style.setProperty('--plain-history-space', space);
     }
     titlebar.querySelector('.plain-empty-titlebar').hidden = rows.length > 0;
-    // Keep the transparent overlay confined to the buttons when tabs are present.
-    // A wide composited layer can be occluded by an active native side pane.
     titlebar.classList.toggle('plain-compact-titlebar', rows.length > 0);
+  };
+
+  const syncPaneState = () => {
     const handler = shell[area() === 'right' ? 'rightPanelHandler' : 'leftPanelHandler'];
     const selected = shell.isExpanded(area()) ? handler.tabBar.currentTitle?.owner.id : '';
     const selectedWidget = selected && shell.getWidgetById(selected);
@@ -147,17 +137,21 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
     emptyView.hidden = !noViews;
     if (noViews) {
       emptyView.dataset.containerId = viewRegistry.getViewContainerId(selectedWidget);
-      emptyText.textContent = `${selectedWidget.title.label} has no views available in the current context. Open a folder or check this extension’s setup requirements.`;
+      const text = `${selectedWidget.title.label} has no views available in the current context. Open a folder or check this extension’s setup requirements.`;
+      if (emptyText.textContent !== text) emptyText.textContent = text;
     }
     for (const sideHandler of [shell.leftPanelHandler, shell.rightPanelHandler]) {
       const open = sideHandler.container.node.querySelector('.plain-files-open');
       if (open) open.hidden = sideHandler.tabBar.currentTitle?.owner.id !== 'explorer-view-container';
     }
-    for (const control of header.querySelectorAll('[data-plain-view], .plain-button[data-plain-action="files"], .plain-button[data-plain-action="extensions"], .plain-button[data-plain-action="source-control"]')) {
+    for (const { button: control } of sidebar.items.values()) {
       const id = control.dataset.plainView || { files: 'explorer-view-container', extensions: 'vsx-extensions-view-container', 'source-control': 'scm-view-container' }[control.dataset.plainAction];
-      control.setAttribute('aria-pressed', String(id === selected));
+      if (!id) continue;
+      const pressed = String(id === selected);
+      if (control.getAttribute('aria-pressed') !== pressed) control.setAttribute('aria-pressed', pressed);
     }
   };
+  const syncTitlebar = () => { syncGeometry(); syncPaneState(); };
 
   const migrateViews = async () => {
     if (moving) { moveAgain = true; return; }
@@ -187,7 +181,7 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
       } else if (!selected) await shell.collapsePanel(destination);
     } finally {
       moving = false;
-      refreshIcons(); syncTitlebar();
+      schedule({ icons: true, geometry: true, pane: true });
       if (moveAgain || destination !== area()) {
         moveAgain = false;
         requestAnimationFrame(() => migrateViews().catch(error => console.error('Singularity: sidebar move', error)));
@@ -195,12 +189,17 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
     }
   };
 
-  function schedule() {
+  function schedule({ icons = false, geometry = false, pane = true } = {}) {
+    iconsDirty ||= icons; geometryDirty ||= geometry; paneDirty ||= pane;
     if (queued) return;
     queued = true;
     requestAnimationFrame(() => {
       queued = false;
-      refreshIcons(); syncTitlebar();
+      const updateIcons = iconsDirty, updateGeometry = geometryDirty, updatePane = paneDirty;
+      iconsDirty = geometryDirty = paneDirty = false;
+      if (updateIcons) refreshIcons();
+      if (updateGeometry) syncGeometry();
+      if (updatePane || updateIcons) syncPaneState();
     });
   }
 
@@ -228,16 +227,22 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
 
   shell.onDidAddWidget(widget => {
     if (managed(widget) && !moving) migrateViews().catch(error => console.error('Singularity: extension view', error));
-    schedule();
+    schedule({ geometry: true });
   });
-  shell.onDidRemoveWidget(schedule);
-  shell.onDidChangeCurrentWidget(schedule);
-  plugins.onDidChangePlugins(schedule);
-  contextKeys.onDidChange(schedule);
-  for (const handler of [shell.leftPanelHandler, shell.rightPanelHandler]) handler.tabBar.currentChanged.connect(schedule);
-  new MutationObserver(schedule).observe(shell.mainPanel.node, { childList: true, subtree: true });
-  new ResizeObserver(schedule).observe(shell.mainPanel.node);
-  window.addEventListener('resize', schedule);
+  shell.onDidRemoveWidget(() => schedule({ geometry: true }));
+  shell.onDidChangeCurrentWidget(() => schedule());
+  plugins.onDidChangePlugins(() => schedule({ icons: true }));
+  contextKeys.onDidChange(event => {
+    const changedContributions = containerCount !== viewRegistry.viewContainers.size || viewCount !== viewRegistry.views.size;
+    const icons = changedContributions || event.affects(containerContexts);
+    if (icons || event.affects(viewContexts)) schedule({ icons });
+  });
+  for (const handler of [shell.leftPanelHandler, shell.rightPanelHandler]) handler.tabBar.currentChanged.connect(() => schedule());
+  // Monaco mutates its DOM on every keystroke. Dock-panel layout events cover
+  // tab and split changes without rescanning the editor's rendered text.
+  shell.mainPanel.layoutModified.connect(() => schedule({ geometry: true }));
+  new ResizeObserver(() => schedule({ geometry: true })).observe(shell.mainPanel.node);
+  window.addEventListener('resize', () => schedule({ geometry: true }));
   preferences.onPreferenceChanged(change => { if (change.preferenceName === SIDEBAR_VISIBLE) applyLayout(); });
   applyLayout();
   return { applyLayout, positionPopover, closeExtensionContextMenu, syncTitlebar };

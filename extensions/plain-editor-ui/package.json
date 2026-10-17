@@ -4,6 +4,6 @@
   "private": true,
   "main": "index.js",
   "theiaExtensions": [
-    { "frontend": "index.js" }
+    { "frontend": "index.js", "backend": "backend.js" }
   ]
 }

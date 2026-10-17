@@ -4,8 +4,6 @@ const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
 const { spawn, execFile, execFileSync } = require('node:child_process');
 const fs = require('node:fs/promises');
 const { existsSync } = require('node:fs');
-const http = require('node:http');
-const net = require('node:net');
 const path = require('node:path');
 const { fileURLToPath } = require('node:url');
 const { promisify } = require('node:util');
@@ -15,6 +13,7 @@ const { installBrowserHost } = require('./browser-host.cjs');
 const { installedFonts, windowOptions } = require('./platform.cjs');
 const { backendRuntime } = require('./runtime.cjs');
 const { Updates } = require('./updates.cjs');
+const { allocatePort, waitForBackend } = require('./backend-start.cjs');
 
 const execFileAsync = promisify(execFile);
 
@@ -28,7 +27,6 @@ if (!app.commandLine.hasSwitch('user-data-dir')) {
   if (existsSync(legacyProfile)) app.setPath('userData', legacyProfile);
 }
 let backend;
-let backendFailure;
 let mainWindow;
 let closeApproved = false;
 let closePending = false;
@@ -119,43 +117,6 @@ function updateRecentFiles(change) {
   return result;
 }
 
-function unusedPort() {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      const port = server.address().port;
-      server.close(() => resolve(port));
-    });
-  });
-}
-
-function isReady(port) {
-  return new Promise(resolve => {
-    const request = http.get(`http://127.0.0.1:${port}/`, response => {
-      response.resume();
-      resolve(response.statusCode < 500);
-    });
-    request.on('error', () => resolve(false));
-    request.setTimeout(1000, () => {
-      request.destroy();
-      resolve(false);
-    });
-  });
-}
-
-async function waitForBackend(port) {
-  for (let attempt = 0; attempt < 180; attempt++) {
-    if (backendFailure) throw backendFailure;
-    if (backend.exitCode !== null) {
-      throw new Error(`Editor backend exited with code ${backend.exitCode}.`);
-    }
-    if (await isReady(port)) return;
-    await new Promise(resolve => setTimeout(resolve, 250));
-  }
-  throw new Error('Editor backend did not start within 45 seconds.');
-}
-
 function openExternally(url, localOrigin) {
   let parsed;
   try {
@@ -169,7 +130,10 @@ function openExternally(url, localOrigin) {
 }
 
 async function start() {
-  const port = await unusedPort();
+  let savedPort;
+  try { savedPort = await stateStore().get('singularity.backendPort'); }
+  catch (error) { console.warn('Singularity: could not read cached backend port', error); }
+  const port = await allocatePort(savedPort);
   // Chromium cannot navigate to UUID.webview.127.0.0.1 (a hostname ending
   // in an IPv4 address). *.localhost resolves to loopback and preserves each
   // extension webview's isolated origin and secure-context service workers.
@@ -178,16 +142,18 @@ async function start() {
   // Theia's native dependencies are built for Node, not Electron's different
   // module ABI. The launcher supplies the exact Node executable used by npm.
   const { node, env } = backendRuntime({ packaged: app.isPackaged, resourcesPath: process.resourcesPath });
+  env.NODE_COMPILE_CACHE ||= path.join(app.getPath('userData'), 'Cache', 'node');
 
   backend = spawn(node, [backendEntry, `--port=${port}`, '--hostname=127.0.0.1', '--plugins=local-dir:./plugins'], {
     cwd: root,
     env,
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     windowsHide: true
   });
-  backend.on('error', error => { backendFailure = error; });
   backend.stdout.pipe(process.stdout);
   backend.stderr.pipe(process.stderr);
+  const backendReady = waitForBackend(backend, port);
+  // The stable loopback origin lets Chromium retain compiled frontend code.
 
   if (process.platform === 'darwin') {
     // AppKit uses a native menu for Command shortcuts, clipboard actions,
@@ -214,6 +180,7 @@ async function start() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      v8CacheOptions: 'bypassHeatCheckAndEagerCompile',
       preload: path.join(__dirname, 'preload.cjs')
     }
   });
@@ -245,7 +212,8 @@ async function start() {
   });
 
   try {
-    await waitForBackend(port);
+    await backendReady;
+    stateStore().set('singularity.backendPort', port).catch(error => console.warn('Singularity: could not cache backend port', error));
     await mainWindow.loadURL(origin);
   } catch (error) {
     const message = String(error.message).replace(/[<&]/g, character => character === '<' ? '&lt;' : '&amp;');

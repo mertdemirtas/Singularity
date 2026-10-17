@@ -29,6 +29,7 @@ const { VSXExtensionsModel } = require('@theia/vsx-registry/lib/browser/vsx-exte
 const extensionViewOwner = require('./extension-view-owner');
 const createChromeLayout = require('./chrome-layout');
 const { SIDEBAR_VISIBLE } = createChromeLayout;
+const { ORDER: SIDEBAR_ORDER, HIDDEN: HIDDEN_SIDEBAR_ITEMS, DEFAULT_ORDER } = require('./sidebar');
 const AppHistory = require('./app-history');
 const { primaryPressed, navigationShortcut, navigationDirection } = require('./platform');
 const { UntitledResourceResolver } = require('@theia/core/lib/common/resource');
@@ -77,7 +78,6 @@ function buildHeader() {
     <div class="plain-rail-tools">
       ${button('Files', 'files', 'files', 'plain-icon-only')}
       ${button('Source Control', 'git', 'source-control', 'plain-icon-only')}
-      <div id="plain-extension-icons" role="group" aria-label="Extension views"></div>
     </div>
     <div class="plain-rail-footer">
       ${button('Extensions', 'extensions', 'extensions', 'plain-icon-only')}
@@ -107,6 +107,7 @@ function buildOpenMenu() {
   menu.hidden = true;
   menu.innerHTML = `<button type="button" role="menuitem" data-plain-action="open-file">Open File…</button>
     <button type="button" role="menuitem" data-plain-action="open-folder">Open Folder…</button>
+    <button type="button" role="menuitem" data-plain-action="clone-repository">Clone Repository…</button>
     ${window.plainEditorDesktop ? '<div class="plain-menu-label">Recent files</div><div id="plain-recent-files"></div><button type="button" role="menuitem" data-plain-action="clear-recent">Clear Recent Files</button>' : ''}`;
   document.body.append(menu);
   return menu;
@@ -183,6 +184,7 @@ function buildSettings() {
 }
 
 module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
+  require('./large-files')(rebind);
   if (window.plainEditorDesktop) rebind(LocalStorageService).toConstantValue({
     getData: async (key, fallback) => {
       const value = await window.plainEditorDesktop.readState(key);
@@ -196,6 +198,8 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
   bind(PreferenceContribution).toConstantValue({ schema: {
     type: 'object', properties: {
       [SIDEBAR_VISIBLE]: { type: 'boolean', default: true, description: 'Show the sidebar and its open side pane.' },
+      [SIDEBAR_ORDER]: { type: 'array', items: { type: 'string' }, default: DEFAULT_ORDER, description: 'Sidebar icon order. $bottom separates the top icons from the bottom icons.' },
+      [HIDDEN_SIDEBAR_ITEMS]: { type: 'array', items: { type: 'string' }, default: [], description: 'Hidden sidebar items. Right-click the sidebar to show them again.' },
       [RECOVERY_ENABLED]: { type: 'boolean', default: true, description: 'Keep local recovery copies of unsaved text and reopen them after a crash. Existing copies are kept when disabled.' }
     }
   } });
@@ -437,6 +441,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       if (!pinnedSide) await shell.collapsePanel(panelArea());
     };
     const openSide = async (name, preview = false) => {
+      if (preview && header.classList.contains('plain-sidebar-dragging')) return;
       if (!preferences.get(SIDEBAR_VISIBLE, true)) {
         if (preview) return;
         await preferences.set(SIDEBAR_VISIBLE, true, PreferenceScope.User);
@@ -536,6 +541,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         renderUpdates(await window.plainEditorDesktop?.updates('check'));
       },
       'open-folder': openFolder,
+      'clone-repository': () => execute('git.clone'),
       focus: toggleFocus,
       back: () => navigate(-1),
       forward: () => navigate(1),
@@ -686,6 +692,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       }
     };
     return {
+      onStart() { require('./startup')(container); },
       onDidInitializeLayout: async app => {
         shell = app.shell;
         await preferences.ready;
@@ -769,6 +776,12 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           contextKeys: container.get(ContextKeyService),
           getOpenPane: () => focusMode || !preferences.get(SIDEBAR_VISIBLE, true) ? '' : pinnedSide || previewSide,
           openView: id => { closeMenu(); return openSide(id); }, openFolder, messages, icon,
+          openSettings: () => actions.settings(),
+          onHideSidebarItem: async control => {
+            const selected = shell.leftPanelHandler.tabBar.currentTitle?.owner.id;
+            const id = control?.dataset.plainView || { files: 'explorer-view-container', 'source-control': 'scm-view-container', extensions: 'vsx-extensions-view-container' }[control?.dataset.plainAction];
+            if (id === selected && shell.isExpanded('left')) await actions['toggle-pane']();
+          },
           openExtensionSettings: async id => {
             const deployed = plugins.plugins.map(metadata => plugins.getPlugin(metadata.model.id)).filter(Boolean);
             const owner = extensionViewOwner(id, deployed);
@@ -930,6 +943,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         closeMinimap.addEventListener('click', () => preferences.set('editor.minimap.enabled', false, PreferenceScope.User)
           .catch(error => console.error('Singularity: hide minimap', error)));
         const updateMinimap = () => {
+          if (!preferences.get('editor.minimap.enabled', false)) { closeMinimap.hidden = true; return; }
           const editor = document.querySelector('#theia-main-content-panel .theia-editor:not(.lm-mod-hidden) .monaco-editor');
           const minimap = editor?.querySelector('.minimap');
           const visible = preferences.get('editor.minimap.enabled', false) && minimap && minimap.getClientRects().length > 0;
@@ -939,6 +953,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         preferences.onPreferenceChanged(change => {
           if (change.preferenceName === 'editor.fontFamily') syncFont();
           if (change.preferenceName === 'editor.minimap.enabled') {
+            syncMinimapObserver();
             updateMinimap();
             setTimeout(updateMinimap, 150);
           }
@@ -972,11 +987,16 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         });
         const main = document.getElementById('theia-main-content-panel');
         let minimapUpdateQueued = false;
-        new MutationObserver(() => {
+        const minimapObserver = new MutationObserver(() => {
           if (minimapUpdateQueued) return;
           minimapUpdateQueued = true;
           requestAnimationFrame(() => { minimapUpdateQueued = false; updateMinimap(); });
-        }).observe(main, { childList: true, subtree: true });
+        });
+        const syncMinimapObserver = () => {
+          minimapObserver.disconnect();
+          if (preferences.get('editor.minimap.enabled', false)) minimapObserver.observe(main, { childList: true, subtree: true });
+        };
+        syncMinimapObserver();
         updateMinimap();
 
         window.addEventListener('keydown', event => {
@@ -1004,7 +1024,11 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         if (![...shell.mainPanel.widgets()].length) {
           const page = await widgets.getOrCreateWidget(welcome.ID);
           await shell.addWidget(page, { area: 'main' });
-          await shell.activateWidget(page.id);
+          // The loading screen can prevent focus before revealShell. Waiting
+          // for activation here delays readiness by the focus timeout (2 s).
+          app.stateService.reachedState('ready').then(() => {
+            if (!page.isDisposed && shell.mainPanel.currentTitle?.owner === page && !shell.activeWidget) return shell.activateWidget(page.id);
+          }).catch(error => console.error('Singularity: welcome focus', error));
         }
         if (recovery) {
           commands.registerCommand({ id: 'plain-editor.recover-documents', label: 'Recover Unsaved Documents', category: 'Singularity' }, {
