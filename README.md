@@ -29,7 +29,17 @@ Drag sidebar icons to reorder them. Right-click an icon to hide it, or right-cli
 
 To choose a GitHub repository, use **Files → Open → Clone Repository** and select GitHub. The GitHub Pull Requests extension shows pull requests and issues for the repository folder you have open. Its optional Copilot chat attachments are unavailable in Singularity.
 
+Source Control asks for your Git author name and email before your first commit if they are missing. These are saved only for that repository. Use **Configure Commit Identity** in Source Control or the command palette to change them later.
+
+Click **Source Control** to open the Git workspace. Review changes, stage and commit, push and pull, manage branches, and view history and remotes. **History** shows each commit’s changed files and numbered diffs. **More…** contains tags, stashes, and other actions inside the workspace.
+
+To merge, open **Branches**, choose **Merge…**, and confirm the source and destination. If conflicts occur, choose **Resolve** to compare the full files with highlighted differences. Use the buttons above each conflict to choose **Current**, **Incoming**, or **Both**. Click a source gutter icon to select changed lines, or edit **Result** yourself. **Use this file** replaces the entire result with that version. Resize the panes or **Expand** for more space while keeping both versions visible. Use **Full screen** to focus on a conflict or code preview, and **Escape** to return. Then **Save and stage** and **Finish merge**. Conflict editing supports UTF-8 text files up to 1 MB.
+
+Push, merge, abort, discard, and other destructive Git actions ask for confirmation before proceeding. Staged and unstaged files have separate scrolling lists; conflicts appear first in a distinct color.
+
 Large text files use a lighter editing mode: automatic Git gutter diffs and extension document processing are disabled when Monaco marks a file as large (normally above 20 MB or 300,000 lines). Editing, saving, and crash recovery remain available. Very wide files open without word wrap.
+
+The browser searches with Google and also opens websites, localhost, and server addresses. Its start page lists recent visits and closed pages saved on this computer. Use **Home** to return to it or **Clear history** to remove the list.
 
 ## Keyboard shortcuts
 

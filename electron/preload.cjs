@@ -18,6 +18,11 @@ contextBridge.exposeInMainWorld('plainEditorDesktop', {
   removeRecovery(id) { return ipcRenderer.invoke('plain-editor:recovery-remove', id); },
   flushRecovery() { return ipcRenderer.invoke('plain-editor:recovery-flush'); },
   browser(request) { return ipcRenderer.invoke('plain-editor:browser', request); },
+  onBrowserHistory(callback) {
+    const listener = (_event, value) => callback(value);
+    ipcRenderer.on('plain-editor:browser-history', listener);
+    return () => ipcRenderer.removeListener('plain-editor:browser-history', listener);
+  },
   onBrowserState(callback) {
     const listener = (_event, state) => callback(state);
     ipcRenderer.on('plain-editor:browser-state', listener);

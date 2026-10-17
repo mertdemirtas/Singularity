@@ -41,6 +41,7 @@
           "editor.scrollBeyondLastLine": false,
           "editor.renderWhitespace": "selection",
           "files.autoSave": "onWindowChange",
+          "git.mergeEditor": true,
           "workbench.tree.renderIndentGuides": "none"
         }
       }

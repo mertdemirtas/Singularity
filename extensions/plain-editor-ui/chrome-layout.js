@@ -147,7 +147,7 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
     for (const { button: control } of sidebar.items.values()) {
       const id = control.dataset.plainView || { files: 'explorer-view-container', extensions: 'vsx-extensions-view-container', 'source-control': 'scm-view-container' }[control.dataset.plainAction];
       if (!id) continue;
-      const pressed = String(id === selected);
+      const pressed = String(id === selected || (control.dataset.plainAction === 'source-control' && shell.mainPanel.currentTitle?.owner.id === 'plain-git'));
       if (control.getAttribute('aria-pressed') !== pressed) control.setAttribute('aria-pressed', pressed);
     }
   };

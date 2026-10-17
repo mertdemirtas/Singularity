@@ -22,7 +22,7 @@ module.exports = new ContainerModule(bind => {
       const getLifecycle = scanner.getLifecycle.bind(scanner);
       scanner.getLifecycle = plugin => {
         const lifecycle = getLifecycle(plugin);
-        if (`${plugin.publisher}.${plugin.name}`.toLowerCase() === 'github.vscode-pull-request-github') {
+        if (['github.vscode-pull-request-github', 'vscode.git'].includes(`${plugin.publisher}.${plugin.name}`.toLowerCase())) {
           lifecycle.backendInitPath = path.join(process.cwd(), 'extensions/plain-editor-ui/plugin-init.cjs');
         }
         return lifecycle;

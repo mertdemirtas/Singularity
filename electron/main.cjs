@@ -10,6 +10,7 @@ const { promisify } = require('node:util');
 const StateStore = require('./state-store.cjs');
 const RecoveryStore = require('./recovery-store.cjs');
 const { installBrowserHost } = require('./browser-host.cjs');
+const { BrowserHistory } = require('./browser-history.cjs');
 const { installedFonts, windowOptions } = require('./platform.cjs');
 const { backendRuntime } = require('./runtime.cjs');
 const { Updates } = require('./updates.cjs');
@@ -63,7 +64,10 @@ async function prepareUpdate() {
 const stateStore = () => desktopState ||= new StateStore(path.join(app.getPath('userData'), 'workbench-state.json'));
 const recoveryStore = () => recovery ||= new RecoveryStore(path.join(app.getPath('userData'), 'recovery'));
 const validStateKey = key => typeof key === 'string' && key.length > 0 && key.length < 16384;
-const browserHost = installBrowserHost(() => mainWindow);
+const browserHost = installBrowserHost(() => mainWindow, { history: new BrowserHistory({
+  read: () => stateStore().get('singularity.browserHistory'),
+  write: value => stateStore().set('singularity.browserHistory', value)
+}) });
 
 async function installedMonoFonts() {
   if (!fontFamilies) {

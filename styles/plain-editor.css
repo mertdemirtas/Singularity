@@ -188,8 +188,27 @@ body.plain-editor-ready #theia-main-content-panel .plain-window-tabs .theia-tabB
 .plain-browser-toolbar button:disabled{opacity:.45;cursor:default}
 .plain-browser-status{flex:none;min-height:18px;padding:4px 10px;font-size:11px;color:var(--theia-descriptionForeground);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .plain-browser-content{position:relative;flex:1;min-height:0}
-.plain-browser-placeholder{padding:36px;color:var(--theia-descriptionForeground)}
-.plain-browser-placeholder[hidden]{display:none}
+.plain-browser-home{max-width:860px;height:100%;box-sizing:border-box;margin:auto;padding:clamp(24px,5vw,64px) 24px;overflow:auto;color:var(--theia-foreground)}
+.plain-browser-home[hidden]{display:none}
+.plain-browser-home-heading{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.plain-browser-home-heading>.codicon{font-size:28px;color:var(--theia-descriptionForeground)}
+.plain-browser-home h2{font-size:24px;font-weight:500;margin:0}
+.plain-browser-search{display:flex;gap:8px;margin-bottom:32px}
+.plain-browser-search input{flex:1;min-width:0;padding:12px 16px;border:1px solid var(--theia-panel-border);border-radius:10px;background:var(--theia-input-background);color:var(--theia-input-foreground);font:inherit}
+.plain-browser-home button{border:1px solid var(--theia-panel-border);border-radius:8px;background:var(--theia-sideBar-background);color:var(--theia-foreground);font:inherit;cursor:pointer}
+.plain-browser-search button{padding:10px 18px}
+.plain-browser-home button:hover{background:var(--theia-toolbar-hoverBackground)}
+.plain-browser-home button:disabled{opacity:.45;cursor:default}
+.plain-browser-history-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;color:var(--theia-descriptionForeground)}
+.plain-browser-history-heading p{margin:0;font-size:12px}
+.plain-browser-history-heading button{padding:5px 9px;font-size:12px}
+.plain-browser-history-columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:28px}
+.plain-browser-home h3{font-size:13px;font-weight:500;margin:0 0 12px}
+.plain-browser-home ul{list-style:none;margin:0;padding:0}
+.plain-browser-home li{margin-bottom:6px}
+.plain-browser-home li button{display:flex;flex-direction:column;gap:4px;width:100%;padding:10px 12px;border-color:transparent;text-align:left}
+.plain-browser-home li span,.plain-browser-home li small{display:block;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plain-browser-home li small,.plain-browser-history-empty{color:var(--theia-descriptionForeground);font-size:12px}
 .plain-development{overflow:auto;background:var(--theia-editor-background);color:var(--theia-foreground);font:13px/1.5 var(--theia-ui-font-family)}
 .plain-development-content{max-width:680px;margin:auto;padding:28px}
 .plain-development h1{font-size:25px;font-weight:500;margin:0}
@@ -324,3 +343,197 @@ body.plain-editor-ready #theia-main-content-panel .lm-DockPanel-handle{border-co
 #plain-update-progress{max-width:420px;padding:24px;border:1px solid var(--theia-panel-border);border-radius:10px;background:var(--theia-editor-background);color:var(--theia-editor-foreground);font-family:var(--theia-ui-font-family)}
 #plain-update-progress::backdrop{background:rgba(0,0,0,.35)}
 #plain-extension-settings input:focus-visible,#plain-extension-settings select:focus-visible,#plain-extension-settings textarea:focus-visible,#plain-extension-settings button:focus-visible{outline:2px solid var(--theia-focusBorder);outline-offset:1px}
+/* Git stays in the editor workspace, including menus, history and conflicts. */
+#plain-git{box-sizing:border-box;display:flex;flex-direction:column;container-type:inline-size;min-width:0;padding:0;background:var(--theia-editor-background);color:var(--theia-foreground);font:13px/1.45 var(--theia-ui-font-family);overflow:hidden}
+#plain-git button:not(:where(.monaco-editor button)){cursor:pointer;border:1px solid var(--theia-button-border,var(--theia-panel-border));border-radius:5px;padding:5px 10px;background:var(--theia-button-secondaryBackground,var(--theia-sideBar-background));color:var(--theia-button-secondaryForeground,var(--theia-foreground));font:inherit}
+#plain-git button:not(:where(.monaco-editor button)):hover{background:var(--theia-button-secondaryHoverBackground,var(--theia-toolbar-hoverBackground))}
+#plain-git button:not(:where(.monaco-editor button)):disabled{opacity:.45;cursor:default}
+.plain-git-repository{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:12px 16px;background:var(--theia-sideBar-background);border-bottom:1px solid var(--plain-divider-color);flex:none}
+.plain-git-repository>label{display:flex;flex:1;min-width:130px;flex-direction:column;gap:2px}.plain-git-repository small{display:block;color:var(--theia-descriptionForeground);font-size:11px}
+#plain-git .plain-git-branch{display:flex;flex:1;min-width:130px;flex-direction:column;align-items:flex-start;border:0;border-left:1px solid var(--plain-divider-color);border-radius:0;padding:0 12px;background:transparent;color:var(--theia-foreground);text-align:left}
+#plain-git select:not(:where(.monaco-editor select)),#plain-git textarea:not(:where(.monaco-editor textarea)){box-sizing:border-box;min-width:0;padding:5px 8px;border:1px solid var(--theia-input-border,var(--theia-panel-border));border-radius:5px;background:var(--theia-input-background);color:var(--theia-input-foreground);font:inherit}
+#plain-git select:not(:where(.monaco-editor select)){width:100%}.plain-git-head{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plain-git-primary,.plain-git-actions{display:flex;gap:6px;flex-wrap:wrap}.plain-git-actions{padding:12px;border-bottom:1px solid var(--plain-divider-color)}
+#plain-git nav{display:flex;padding:0 16px;gap:22px;border-bottom:1px solid var(--plain-divider-color);flex:none}
+#plain-git nav button{border:0;border-radius:0;padding:8px 0;background:transparent;color:var(--theia-descriptionForeground)}
+#plain-git nav button[aria-pressed='true']{background:transparent;color:var(--theia-foreground);box-shadow:inset 0 -2px var(--theia-focusBorder)}
+#plain-git nav button:hover,#plain-git nav button:focus{background:transparent;color:var(--theia-foreground)}
+.plain-git-status{padding:8px 16px;color:var(--theia-descriptionForeground);border-bottom:1px solid var(--plain-divider-color);flex:none}.plain-git-status:empty{display:none}
+.plain-git-content{display:grid;grid-template-columns:minmax(180px,var(--plain-git-sidebar-width,36%)) 5px minmax(220px,1fr);flex:1;min-height:0;overflow:hidden}.plain-git-sidebar{display:flex;flex-direction:column;min-height:0;overflow:hidden;border-right:1px solid var(--plain-divider-color);background:var(--theia-sideBar-background)}.plain-git-list{flex:1;min-height:70px;overflow:auto;padding:8px 12px}.plain-git-actions:empty{display:none}
+#plain-git h3{font:600 11px var(--theia-ui-font-family);display:flex;justify-content:space-between;align-items:center;margin:6px 0;padding-bottom:8px;border-bottom:1px solid var(--plain-divider-color)}
+.plain-git-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:9px 0;border-bottom:1px solid var(--theia-panel-border)}.plain-git-row>span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.plain-git-row button{flex:none}
+#plain-git .plain-git-file{border:0;border-radius:3px;background:transparent;color:var(--theia-foreground);text-align:left;padding:4px 6px;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#plain-git .plain-git-file:hover{background:var(--theia-list-hoverBackground);color:var(--theia-list-hoverForeground,var(--theia-foreground))}#plain-git .plain-git-row.selected .plain-git-file{box-shadow:inset 2px 0 var(--theia-focusBorder);background:var(--theia-list-activeSelectionBackground);color:var(--theia-list-activeSelectionForeground)}
+.plain-git-muted{color:var(--theia-descriptionForeground)}.plain-git-history-row{display:flex;flex-direction:column;gap:3px;padding:10px 0;border-bottom:1px solid var(--theia-panel-border);overflow-wrap:anywhere}#plain-git .plain-git-history-row button{border:0;padding:0;background:transparent;color:var(--theia-foreground);text-align:left}
+.plain-git-commit{display:flex;flex-wrap:wrap;gap:8px;padding:14px 12px;border-top:1px solid var(--plain-divider-color);flex:none}.plain-git-commit label,.plain-git-commit textarea{width:100%}.plain-git-commit textarea{resize:vertical;min-height:58px;max-height:120px}.plain-git-commit small{width:100%;color:var(--theia-descriptionForeground)}
+#plain-git .plain-git-commit .theia-button{background:var(--theia-button-background);color:var(--theia-button-foreground)}.plain-git-empty{padding:12px 18px 24px}.plain-git-empty button{margin-right:8px}
+#plain-git [hidden]{display:none!important}#plain-git button:focus-visible,#plain-git select:focus-visible,#plain-git textarea:focus-visible{outline:2px solid var(--theia-focusBorder);outline-offset:1px}
+.plain-git-review{display:flex;flex-direction:column;min-width:0;min-height:0}.plain-git-review-title{padding:14px 18px;border-bottom:1px solid var(--plain-divider-color);font-weight:600;overflow-wrap:anywhere}.plain-git-review-body{overflow:auto;flex:1;min-height:0}.plain-git-review-note{margin:0;padding:18px;color:var(--theia-descriptionForeground);line-height:1.7;max-width:55ch}.plain-git-patch{margin:0;padding:10px 0;font:12px/1.65 var(--theia-code-font-family,var(--theia-ui-font-family));tab-size:4;overflow-x:auto}.plain-git-patch .added{background:var(--theia-diffEditor-insertedLineBackground,var(--theia-diffEditor-insertedTextBackground))}.plain-git-patch .removed{background:var(--theia-diffEditor-removedLineBackground,var(--theia-diffEditor-removedTextBackground))}.plain-git-patch .hunk{color:var(--theia-textLink-foreground)}.plain-git-commit-detail{padding:0 18px;white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}
+.plain-git-diff-line{display:grid;grid-template-columns:4ch 4ch minmax(0,1fr);min-width:max-content}.plain-git-diff-line code{white-space:pre;padding:0 12px;font:inherit;color:inherit;background:transparent}.plain-git-diff-line .line-number{display:block;padding:0 6px;text-align:right;color:var(--theia-editorLineNumber-foreground);user-select:none;border-right:1px solid var(--theia-panel-border)}.plain-git-diff-stats{padding:10px 18px;border-bottom:1px solid var(--plain-divider-color);color:var(--theia-descriptionForeground);font-size:12px}
+.plain-git-more{position:absolute;z-index:10;right:16px;top:64px;width:270px;max-height:calc(100% - 100px);overflow:auto;padding:8px;border:1px solid var(--theia-widget-border,var(--plain-divider-color));border-radius:7px;background:var(--theia-editorWidget-background,var(--theia-editor-background));box-shadow:0 8px 24px var(--theia-widget-shadow)}#plain-git .plain-git-more button{display:block;width:100%;padding:7px 10px;border:0;text-align:left;background:transparent;color:var(--theia-foreground)}#plain-git .plain-git-more button:hover{background:var(--theia-list-hoverBackground)}#plain-git .plain-git-more h3{padding:10px 10px 4px;margin:0;border:0;color:var(--theia-descriptionForeground)}
+.plain-git-merge{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--plain-divider-color);background:var(--theia-editorWidget-background,var(--theia-sideBar-background))}.plain-git-merge>span{flex:1;min-width:200px}.plain-git-review-body>[data-git-confirm-merge],.plain-git-review-body>[data-git-confirm-abort],.plain-git-review-body>[data-git-save-resolution]{margin:0 18px 18px}
+.plain-git-history-details{display:grid;grid-template-columns:minmax(110px,var(--plain-git-files-width,28%)) 5px minmax(220px,1fr);min-width:0}.plain-git-history-files{display:flex;flex-direction:column;align-items:stretch;padding:8px;border-right:1px solid var(--plain-divider-color);max-height:400px;overflow:auto;gap:4px}#plain-git .plain-git-history-files button{background:transparent;color:var(--theia-foreground);text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:0}#plain-git .plain-git-history-files button[aria-pressed='true'],#plain-git button.plain-git-history-row[aria-pressed='true']{background:var(--theia-list-activeSelectionBackground);color:var(--theia-list-activeSelectionForeground)}.plain-git-history-diff{min-width:0}.plain-git-history-diff h3{padding:10px 14px;overflow-wrap:anywhere}.plain-git-history-diff .plain-git-review-note{padding:10px 14px}
+@container (max-width:650px){.plain-git-content{display:block;overflow:auto}.plain-git-sidebar{max-height:65%;min-height:260px;border-right:0;border-bottom:1px solid var(--plain-divider-color)}.plain-git-review{min-height:200px}.plain-git-review-body{overflow:visible}.plain-git-primary{width:100%}}
+@container (max-width:650px){.plain-git-history-details{grid-template-columns:1fr}.plain-git-history-files{max-height:150px;border-right:0;border-bottom:1px solid var(--plain-divider-color)}.plain-git-conflict-choices{grid-template-columns:1fr}.plain-git-more{top:110px}}
+
+/* Git review panes share theme colors and support pointer and keyboard resizing. */
+.plain-git-sidebar,.plain-git-history-files{border-right:0}
+.plain-git-splitter{position:relative;cursor:col-resize;touch-action:none;background:transparent;min-height:100%;outline-offset:-2px}
+.plain-git-splitter::after{content:"";position:absolute;top:0;bottom:0;left:2px;width:1px;background:var(--plain-divider-color)}
+.plain-git-splitter:hover,.plain-git-splitter:focus-visible{background:var(--theia-focusBorder)}
+.plain-git-resizing,.plain-git-resizing *{cursor:col-resize!important;user-select:none!important}
+#plain-git button.plain-git-history-row{display:flex;width:100%;gap:7px;align-items:stretch;text-align:left;white-space:normal;padding:12px 10px;border:0;border-bottom:1px solid var(--theia-panel-border);border-radius:3px;background:transparent;color:var(--theia-foreground)}
+#plain-git button.plain-git-history-row:hover{background:var(--theia-list-hoverBackground);color:var(--theia-list-hoverForeground,var(--theia-foreground))}
+#plain-git button.plain-git-history-row[aria-pressed='true']{background:var(--theia-list-activeSelectionBackground);color:var(--theia-list-activeSelectionForeground);box-shadow:inset 2px 0 var(--theia-focusBorder)}
+#plain-git button.plain-git-history-row[aria-pressed='true'] small{color:inherit;opacity:.85}
+.plain-git-history-files [data-status='A']{--git-status:var(--theia-gitDecoration-addedResourceForeground,var(--theia-charts-green))}
+.plain-git-history-files [data-status='D']{--git-status:var(--theia-gitDecoration-deletedResourceForeground,var(--theia-charts-red))}
+.plain-git-history-files [data-status='M'],.plain-git-history-files [data-status='T']{--git-status:var(--theia-gitDecoration-modifiedResourceForeground,var(--theia-charts-orange))}
+.plain-git-file-status{font-weight:600;color:var(--git-status,var(--theia-foreground))}
+#plain-git .plain-git-history-files button[data-status]{padding:9px 7px;border-left:3px solid var(--git-status,var(--theia-focusBorder));min-height:34px}
+#plain-git .plain-git-history-files button[aria-pressed='true'] .plain-git-file-status{color:inherit}
+.plain-git-change-group{padding:8px 8px 4px;margin-bottom:14px;border:1px solid var(--theia-panel-border);border-left:3px solid var(--theia-gitDecoration-modifiedResourceForeground,var(--theia-charts-orange));border-radius:4px}
+.plain-git-change-group[data-stage='staged']{border-left-color:var(--theia-gitDecoration-addedResourceForeground,var(--theia-charts-green));background:var(--theia-diffEditor-insertedLineBackground)}
+.plain-git-change-group[data-stage='conflicts']{border-left-color:var(--theia-gitDecoration-conflictingResourceForeground,var(--theia-errorForeground))}
+.plain-git-preview-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--plain-divider-color)}
+.plain-git-preview-controls:empty{display:none}
+.plain-git-patch-metadata{padding:8px 14px;color:var(--theia-descriptionForeground);font-size:12px;border-bottom:1px solid var(--plain-divider-color)}
+.plain-git-patch-metadata summary{cursor:pointer}.plain-git-patch-metadata pre{overflow:auto;max-height:130px;font:inherit;white-space:pre}
+.plain-git-graph{display:grid;overflow:auto;padding:0 14px;min-width:0}.plain-git-graph>svg{position:sticky;left:0;background:var(--theia-editor-background)}
+.plain-git-graph-row{box-sizing:border-box;height:58px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--theia-panel-border)}
+#plain-git .plain-git-graph-row>[data-git-graph-commit]{flex:1;min-width:90px;background:transparent;color:var(--theia-foreground);text-align:left;border:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plain-git-graph-row>small{white-space:nowrap;font-size:11px}.plain-git-graph-refs{display:flex;gap:4px;max-width:45%;overflow-x:auto}
+#plain-git .plain-git-graph-refs button{white-space:nowrap;font-size:11px;padding:3px 6px;border:1px solid var(--theia-focusBorder);background:var(--theia-editorWidget-background);color:var(--theia-foreground)}
+.plain-git-branch-menu{position:fixed;z-index:10000;min-width:220px;max-width:min(360px,95vw);max-height:80vh;overflow:auto;padding:6px;border:1px solid var(--theia-menu-border,var(--plain-divider-color));border-radius:6px;background:var(--theia-menu-background,var(--theia-editor-background));color:var(--theia-menu-foreground,var(--theia-foreground));box-shadow:0 6px 20px var(--theia-widget-shadow)}
+.plain-git-branch-menu>strong{display:block;padding:7px 10px;overflow-wrap:anywhere}
+#plain-git .plain-git-branch-menu button{display:block;width:100%;padding:7px 10px;text-align:left;border:0;background:transparent;color:inherit}
+#plain-git .plain-git-branch-menu button:not(:disabled):hover,#plain-git .plain-git-branch-menu button:focus-visible{background:var(--theia-menu-selectionBackground,var(--theia-list-activeSelectionBackground));color:var(--theia-menu-selectionForeground,var(--theia-list-activeSelectionForeground))}
+@container (max-width:650px){.plain-git-splitter{display:none}.plain-git-history-details{grid-template-columns:1fr}.plain-git-graph-row>small{display:none}}
+/* Branch labels and commits share one graph; history reserves its height for code. */
+.plain-git-content[data-section='branches']{display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden}
+.plain-git-content[data-section='branches']>.plain-git-sidebar,.plain-git-content[data-section='branches']>.plain-git-main-splitter{display:none}
+.plain-git-graph-view{display:flex;flex-direction:column;overflow:hidden}
+.plain-git-graph-view>.plain-git-review-note{padding:6px 14px;max-width:none;font-size:12px;flex:none}
+.plain-git-graph-actions{padding:7px 14px;flex:none}
+.plain-git-graph-view>.plain-git-graph{flex:1;min-height:0;align-items:start}
+.plain-git-graph-view>.plain-git-review-note:last-child{padding:6px 14px}
+.plain-git-back{margin:12px 18px}
+.plain-git-content[data-section='github']{display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden}
+.plain-git-content[data-section='github']>.plain-git-sidebar,.plain-git-content[data-section='github']>.plain-git-main-splitter{display:none}
+.plain-git-github-form{max-width:800px;padding:12px 20px 24px;box-sizing:border-box}
+.plain-git-github-form>p{line-height:1.6}.plain-git-github-login,.plain-git-github-buttons{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0}
+.plain-git-github-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.plain-git-github-fields>label{display:flex;flex-direction:column;gap:5px;min-width:0}
+.plain-git-github-fields .plain-git-wide{grid-column:1/-1}
+#plain-git .plain-git-github-fields input:not([type='checkbox']){box-sizing:border-box;min-width:0;padding:6px 8px;border:1px solid var(--theia-input-border,var(--theia-panel-border));border-radius:4px;background:var(--theia-input-background);color:var(--theia-input-foreground);font:inherit}
+.plain-git-github-options{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 0}.plain-git-github-options label{display:flex;align-items:center;gap:6px}
+.plain-git-github-form summary{cursor:pointer}.plain-git-github-form [data-github-summary]{padding:10px 12px;border:1px solid var(--plain-divider-color);border-radius:4px;font-size:12px}
+.plain-git-github-form [data-github-status]{overflow-wrap:anywhere}.plain-git-github-form a{color:var(--theia-textLink-foreground)}
+@container (max-width:650px){.plain-git-github-fields,.plain-git-github-options{grid-template-columns:1fr}.plain-git-content[data-section='github'] .plain-git-review{min-height:0}}
+.plain-git-history-heading{display:flex;align-items:center;gap:10px;position:relative;padding:6px 12px;min-height:28px;flex:none;z-index:2}
+.plain-git-history-subject{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.plain-git-commit-metadata{flex:none;font-weight:400;font-size:12px}
+.plain-git-commit-metadata>summary{cursor:pointer;padding:4px 6px;color:var(--theia-descriptionForeground)}
+.plain-git-commit-metadata-panel{position:absolute;right:8px;top:100%;width:min(420px,calc(100% - 16px));box-sizing:border-box;max-height:250px;overflow:auto;padding:12px;border:1px solid var(--theia-widget-border,var(--plain-divider-color));border-radius:5px;background:var(--theia-editorWidget-background,var(--theia-editor-background));box-shadow:0 5px 15px var(--theia-widget-shadow)}
+.plain-git-commit-metadata-panel p{margin:0 0 8px}.plain-git-commit-metadata-panel pre{font:inherit;white-space:pre-wrap;overflow-wrap:anywhere}
+.plain-git-history-view{display:flex;flex-direction:column;overflow:hidden}
+.plain-git-history-view>.plain-git-history-details{flex:1;min-height:0;overflow:hidden}
+.plain-git-history-view .plain-git-history-files{max-height:none;min-height:0}
+.plain-git-file-count{padding:2px 6px 6px;color:var(--theia-descriptionForeground);flex:none}
+.plain-git-history-view .plain-git-history-diff{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+#plain-git .plain-git-history-diff>h3{flex:none;margin:0;padding:7px 12px;min-height:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.plain-git-history-diff>.plain-git-preview-body{flex:1;min-height:0;overflow:auto}
+.plain-git-history-diff>.plain-git-preview-controls{flex:none;padding:5px 10px;gap:10px;min-height:28px}
+.plain-git-history-diff>.plain-git-preview-controls>.plain-git-diff-stats{padding:0;border:0;font-size:11px}
+.plain-git-history-diff .plain-git-patch-metadata{padding:0;border:0;font-size:11px;position:relative}
+.plain-git-history-diff .plain-git-patch-metadata[open]{flex-basis:100%}
+.plain-git-history-diff .plain-git-patch{padding-top:5px}
+@container (max-width:650px){
+  .plain-git-history-view>.plain-git-history-details{grid-template-rows:auto minmax(180px,1fr)}
+  .plain-git-history-view .plain-git-history-files{max-height:120px}
+  .plain-git-content[data-section='history'] .plain-git-review{height:70vh;min-height:300px}
+  .plain-git-content[data-section='branches'] .plain-git-review{min-height:0}
+}
+/* Full-file merge resolution: virtualized code panes and block-level choices. */
+.plain-git-content[data-section='conflict']{display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden}
+.plain-git-content[data-section='conflict']:not(.plain-git-show-conflict-files)>.plain-git-sidebar,.plain-git-content[data-section='conflict']:not(.plain-git-show-conflict-files)>.plain-git-main-splitter{display:none}
+.plain-git-content[data-section='conflict'].plain-git-show-conflict-files{grid-template-columns:minmax(180px,var(--plain-git-sidebar-width,26%)) 5px minmax(240px,1fr)}
+.plain-git-content[data-section='conflict'] .plain-git-commit{display:none}
+.plain-git-content[data-section='conflict'] .plain-git-sidebar{max-height:none;min-height:0}
+.plain-git-merge-view{display:flex;overflow:hidden;min-height:0;flex:1}
+.plain-git-merge-heading{padding:7px 12px;font-size:12px;flex:none}
+.plain-git-merge-editor{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;overflow:hidden}
+.plain-git-merge-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:6px 10px;border-bottom:1px solid var(--plain-divider-color);font-size:12px;flex:none}
+.plain-git-merge-toolbar label,.plain-git-merge-footer>label{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.plain-git-merge-toolbar [data-merge-counter]{flex:1;min-width:120px;color:var(--theia-descriptionForeground)}
+.plain-git-merge-body{display:grid;grid-template-columns:minmax(330px,var(--plain-merge-split,64%)) 5px minmax(240px,1fr);grid-template-rows:minmax(0,1fr);flex:1;min-height:0;min-width:0;overflow:hidden}
+.plain-git-merge-body[data-layout='rows']{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(110px,var(--plain-merge-split,45%)) 5px minmax(150px,1fr)}
+.plain-git-merge-body>.plain-git-splitter{min-height:0;min-width:0}
+.plain-git-merge-splitter[aria-orientation='horizontal']{cursor:row-resize}
+.plain-git-merge-splitter[aria-orientation='horizontal']::after{left:0;right:0;top:2px;bottom:auto;width:auto;height:1px}
+.plain-git-resizing-rows,.plain-git-resizing-rows *{cursor:row-resize!important}
+.plain-git-merge-comparison,.plain-git-merge-result-pane{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.plain-git-merge-source-headings{display:grid;grid-template-columns:1fr 1fr;flex:none;border-bottom:1px solid var(--plain-divider-color);font-size:12px}
+.plain-git-merge-source-headings>div{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 8px;min-width:0}
+.plain-git-merge-source-headings>div+div{border-left:1px solid var(--plain-divider-color)}
+.plain-git-merge-source-headings small,.plain-git-merge-result-heading small{color:var(--theia-descriptionForeground);flex:1}
+.plain-git-merge-diff,.plain-git-merge-result-code{position:relative;min-height:0;min-width:0;flex:1;overflow:hidden}
+.plain-git-merge-result-heading,.plain-git-merge-block-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 8px;border-bottom:1px solid var(--plain-divider-color);flex:none;font-size:12px}
+.plain-git-merge-result-heading label{display:flex;align-items:center;gap:4px;color:var(--theia-descriptionForeground)}
+#plain-git .plain-git-merge-result-heading input{width:65px;box-sizing:border-box;padding:3px;border:1px solid var(--theia-input-border,var(--plain-divider-color));background:var(--theia-input-background);color:var(--theia-input-foreground);font:inherit}
+.plain-git-merge-block-actions>span{width:100%;color:var(--theia-descriptionForeground);font-size:11px}
+.plain-git-merge-diff-navigation{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:none;padding:5px 8px;border-top:1px solid var(--plain-divider-color);font-size:11px}
+.plain-git-merge-diff-navigation small{color:var(--theia-descriptionForeground)}
+#plain-git .plain-git-merge-editor button:not(:where(.monaco-editor button)){padding:4px 7px;font-size:12px}
+.plain-git-merge-footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 10px;border-top:1px solid var(--plain-divider-color);flex:none;font-size:12px}
+.plain-git-merge-footer>[data-merge-help]{flex:1;min-width:160px;font-size:11px;color:var(--theia-descriptionForeground)}
+.plain-git-merge-toolbar>.plain-git-conflict-choices{position:relative;padding:4px;display:block}
+.plain-git-conflict-choices summary{cursor:pointer}
+.plain-git-conflict-choices>div{position:absolute;top:100%;right:0;z-index:20;min-width:230px;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--theia-editorWidget-background,var(--theia-editor-background));border:1px solid var(--plain-divider-color);border-radius:5px;box-shadow:0 5px 18px var(--theia-widget-shadow)}
+.monaco-editor .plain-merge-marker{background:var(--theia-merge-commonHeaderBackground,var(--theia-editor-lineHighlightBackground));font-weight:bold}
+.monaco-editor .plain-merge-current{background:var(--theia-merge-currentContentBackground,var(--theia-diffEditor-removedLineBackground))}
+.monaco-editor .plain-merge-incoming{background:var(--theia-merge-incomingContentBackground,var(--theia-diffEditor-insertedLineBackground))}
+.monaco-editor .plain-merge-selected-source{outline:1px solid var(--theia-focusBorder);outline-offset:-1px}
+
+/* Keep each change group visible, with its own scrolling file list. */
+.plain-git-content:is([data-section='changes'],[data-section='conflict']) .plain-git-list:has(.plain-git-change-group){display:flex;flex-direction:column;gap:10px}
+.plain-git-change-group{display:flex;flex-direction:column;flex:1 0 125px;min-height:125px;overflow:hidden;margin:0;box-sizing:border-box}
+.plain-git-change-group>h3,.plain-git-change-group>.plain-git-muted{flex:none}
+.plain-git-change-files{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}
+.plain-git-change-group[data-stage='conflicts']{background:var(--theia-inputValidation-errorBackground,var(--theia-editor-background))}
+#plain-git .plain-git-change-group[data-stage='conflicts'] h3,#plain-git .plain-git-change-group[data-stage='conflicts'] .plain-git-file{color:var(--theia-gitDecoration-conflictingResourceForeground,var(--theia-errorForeground,#d32f2f))}
+#plain-git .plain-git-change-group[data-stage='conflicts'] .selected .plain-git-file{color:var(--theia-list-activeSelectionForeground)}
+.plain-git-conflict-label{font-size:11px;color:var(--theia-errorForeground,#d32f2f);border:1px solid currentColor;border-radius:3px;padding:1px 5px}
+#plain-git .plain-git-change-group h3{gap:6px;flex-wrap:wrap}
+#plain-git :is([data-merge-action='discard'],.plain-git-discard,.plain-git-danger){color:var(--theia-errorForeground,#d32f2f);border-color:currentColor;background:transparent}
+#plain-git :is([data-merge-action='discard'],.plain-git-discard,.plain-git-danger):hover{background:var(--theia-inputValidation-errorBackground,var(--theia-list-hoverBackground))}
+#plain-git [data-git-save-resolution]{background:var(--theia-testing-runAction,#238636);color:var(--theia-editor-background,#fff);border-color:transparent;font-weight:600}
+#plain-git [data-git-save-resolution]:hover{background:var(--theia-testing-runAction,#238636);filter:brightness(1.12)}
+.monaco-editor .plain-merge-select-change{cursor:pointer;color:var(--theia-textLink-foreground);border-radius:3px}
+.monaco-editor .plain-merge-select-change:hover{background:var(--theia-toolbar-hoverBackground);outline:1px solid var(--theia-focusBorder)}
+.monaco-editor .plain-merge-inline-actions{display:flex;align-items:center;gap:5px;box-sizing:border-box;padding:3px 6px;background:var(--theia-editorWidget-background,var(--theia-editor-background));border-top:1px solid var(--plain-divider-color);font:11px var(--theia-ui-font-family);white-space:nowrap;overflow:auto}
+.monaco-editor .plain-merge-inline-actions>span{color:var(--theia-descriptionForeground);margin-right:4px}
+#plain-git .monaco-editor .plain-merge-inline-actions button{font:inherit;cursor:pointer;padding:3px 5px;border:1px solid var(--theia-button-border,var(--plain-divider-color));border-radius:3px;background:var(--theia-button-secondaryBackground,var(--theia-editor-background));color:var(--theia-button-secondaryForeground,var(--theia-foreground))}
+#plain-git .monaco-editor .plain-merge-inline-actions button:hover{background:var(--theia-button-secondaryHoverBackground,var(--theia-toolbar-hoverBackground))}
+#plain-git .monaco-editor .plain-merge-inline-actions button:disabled{opacity:.45;cursor:default}
+
+#plain-git.plain-git-expanded-merge>:is(.plain-git-repository,nav,.plain-git-merge){display:none}
+
+.plain-git-danger-confirmation .theia-button.main{background:var(--theia-errorForeground,#d32f2f);color:var(--theia-editor-background,#fff)}
+/* Inline choices sit above the code, with room for all three buttons. */
+.monaco-editor .plain-merge-inline-actions{z-index:2;overflow:hidden}
+.monaco-editor .plain-merge-inline-actions>span{display:block;line-height:16px}
+.monaco-editor .plain-merge-inline-actions>div{display:flex;gap:5px}
+/* Full screen keeps the active Git review and its controls in the app window. */
+#plain-git.plain-git-fullscreen{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;z-index:1000}
+.plain-git-fullscreen-bar{display:flex;align-items:center;gap:12px;flex:none;padding:6px 12px;border-bottom:1px solid var(--plain-divider-color);background:var(--theia-editor-background)}
+.plain-git-fullscreen-bar>strong{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#plain-git.plain-git-fullscreen>:is(.plain-git-repository,nav,.plain-git-merge),#plain-git.plain-git-fullscreen .plain-git-review-title,#plain-git.plain-git-fullscreen [data-git-fullscreen],#plain-git.plain-git-fullscreen [data-git-action='fullscreen'],#plain-git.plain-git-fullscreen [data-merge-action='files']{display:none}
+#plain-git.plain-git-fullscreen .plain-git-content{display:grid;grid-template-columns:minmax(0,1fr);overflow:hidden}
+#plain-git.plain-git-fullscreen .plain-git-content>.plain-git-sidebar,#plain-git.plain-git-fullscreen .plain-git-content>.plain-git-main-splitter{display:none}
+#plain-git.plain-git-fullscreen .plain-git-history-details{grid-template-columns:minmax(0,1fr)}
+#plain-git.plain-git-fullscreen .plain-git-history-files,#plain-git.plain-git-fullscreen .plain-git-history-details>.plain-git-splitter{display:none}
+body.plain-git-fullscreen-active :is(#plain-header,#plain-titlebar,#plain-app-navigation){visibility:hidden!important}
+.plain-git-change-files .plain-git-row{flex-wrap:nowrap;padding:6px 0;gap:4px}
+#plain-git .plain-git-change-files .plain-git-file{width:auto;flex:1;min-width:0}
+
+.plain-git-merge-source-actions{display:flex;align-items:center;gap:5px;white-space:nowrap}

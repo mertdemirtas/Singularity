@@ -20,7 +20,9 @@ const { Emitter } = require('@theia/core/lib/common/event');
 const { PluginViewRegistry } = require('@theia/plugin-ext/lib/main/browser/view/plugin-view-registry');
 const { HostedPluginSupport } = require('@theia/plugin-ext/lib/hosted/browser/hosted-plugin');
 const { ContextKeyService } = require('@theia/core/lib/browser/context-key-service');
-const { LocalStorageService } = require('@theia/core/lib/browser/storage-service');
+const { LocalStorageService, StorageService } = require('@theia/core/lib/browser/storage-service');
+const { WorkspaceStorageService } = require('@theia/workspace/lib/browser/workspace-storage-service');
+const { authenticationStorage } = require('./auth-storage.cjs');
 const { ShellLayoutRestorer } = require('@theia/core/lib/browser/shell/shell-layout-restorer');
 const { WidgetFactory, WidgetManager } = require('@theia/core/lib/browser/widget-manager');
 const welcome = require('./welcome');
@@ -185,6 +187,8 @@ function buildSettings() {
 
 module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
   require('./large-files')(rebind);
+  require('./view-interaction')(rebind);
+  require('./editor-lifecycle')(rebind);
   if (window.plainEditorDesktop) rebind(LocalStorageService).toConstantValue({
     getData: async (key, fallback) => {
       const value = await window.plainEditorDesktop.readState(key);
@@ -192,9 +196,11 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
     },
     setData: (key, value) => window.plainEditorDesktop.writeState(key, value)
   });
+  rebind(StorageService).toDynamicValue(({container}) => authenticationStorage(container.get(LocalStorageService),container.get(WorkspaceStorageService))).inSingletonScope();
   bind(WidgetFactory).toConstantValue({ id: welcome.ID, createWidget: () => welcome.createWelcome(icon) });
   require('./extensions-panel')(bind);
   require('./development-tools')(bind);
+  require('./git-tools')(bind);
   bind(PreferenceContribution).toConstantValue({ schema: {
     type: 'object', properties: {
       [SIDEBAR_VISIBLE]: { type: 'boolean', default: true, description: 'Show the sidebar and its open side pane.' },
@@ -557,11 +563,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       extensions: () => openSide('extensions'),
       browser: () => execute('plain-editor.browser'),
       development: () => execute('plain-editor.development'),
-      'source-control': async () => {
-        const widget = await widgets.getOrCreateWidget('scm-view-container');
-        if (!widget.isAttached) await shell.addWidget(widget, { area: panelArea() });
-        await openSide(widget.id);
-      },
+      'source-control': () => execute('plain-editor.git-actions'),
       'toggle-pane': async () => {
         closeMenu();
         if (focusMode) {
