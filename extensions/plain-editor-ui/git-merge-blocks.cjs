@@ -39,15 +39,19 @@ function resolveBlock(text, block, choice, selected) {
   const parsed = parseMergeBlocks(text);
   const current = parsed.blocks.find(item=>item.start === block?.start && item.end === block?.end);
   if (parsed.malformed || !current) throw new Error('This conflict changed. Select it again before applying a choice.');
-  let replacement;
-  if (choice === 'current') replacement = current.current;
-  else if (choice === 'incoming') replacement = current.incoming;
-  else if (choice === 'both') replacement = current.current + current.incoming;
-  else if (choice === 'selection' && typeof selected === 'string' && selected.length) {
-    replacement = selected;
-    if ((current.end < text.length || text.endsWith('\n')) && !replacement.endsWith('\n')) replacement += text.includes('\r\n') ? '\r\n' : '\n';
-  } else throw new Error('Select a version or select source lines to use.');
-  return {start:current.start,end:current.end,text:replacement};
+  return {start:current.start,end:current.end,text:choiceText(current,choice,selected,text.includes('\r\n')?'\r\n':'\n',current.end < text.length || text.endsWith('\n'))};
 }
 
-module.exports = {parseMergeBlocks,resolveBlock};
+function choiceText(block, choice, selected, eol, trailingLineBreak) {
+  let replacement;
+  if (choice === 'current') replacement = block.current;
+  else if (choice === 'incoming') replacement = block.incoming;
+  else if (choice === 'both') replacement = block.current + block.incoming;
+  else if (choice === 'selection' && typeof selected === 'string' && selected.length) {
+    replacement = selected;
+    if (trailingLineBreak && !replacement.endsWith('\n')) replacement += eol;
+  } else throw new Error('Select a version or select source lines to use.');
+  return replacement;
+}
+
+module.exports = {parseMergeBlocks,resolveBlock,choiceText};

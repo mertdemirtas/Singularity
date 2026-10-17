@@ -30,7 +30,8 @@ const actions = {
   'git.stashPop':['Pop stash','Apply the saved stash, then remove it if successful. Conflicts may need resolution.'],
   'git.stashApply':['Apply stash','Apply the saved stash to your working files. Conflicts may need resolution.'],
   'git.clean':['Discard','Discard the selected file’s working changes. New files may be deleted.'],
-  discardResolution:['Discard','Discard unsaved resolution edits and reload the file from disk.']
+  discardResolution:['Discard','Discard unsaved resolution edits and reload the file from disk.'],
+  resetMergeChoices:['Reset choices','Restore the original conflicts. Your current choices and manual edits will be replaced; Undo can restore them.']
 };
 
 function gitConfirmation(command, context = {}) {
