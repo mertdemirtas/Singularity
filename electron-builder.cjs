@@ -16,7 +16,7 @@ module.exports = {
     '!**/*.map', '!**/*.map.gz', '!**/*.log', '!**/tests/**', '!**/test/**',
     '!**/*.ts', '!**/node_modules/electron/**'
   ],
-  extraResources: [{ from: '.release-runtime', to: 'runtime', filter: ['**/*', '!after-install.sh'] }],
+  extraResources: [{ from: '.release-runtime', to: 'runtime', filter: ['**/*', '!after-install.sh', '!icons', '!icons/**/*'] }],
   artifactName: 'Singularity-${version}-${os}-${arch}.${ext}',
   publish: { provider: 'github', owner: 'mertdemirtas', repo: 'Singularity', releaseType: 'release' },
   win: { target: ['nsis'], icon: 'assets/singularity-icon.png' },
@@ -35,7 +35,7 @@ module.exports = {
       SUVerifyUpdateBeforeExtraction: true
     }
   },
-  linux: { target: ['deb'], executableName: 'singularity', category: 'Development', icon: 'assets/singularity-icon.png',
+  linux: { target: ['deb'], executableName: 'singularity', category: 'Development', icon: '.release-runtime/icons',
     desktop: { entry: { StartupWMClass: 'Singularity', Keywords: 'text;editor;code;' } } },
   deb: { afterInstall: '.release-runtime/after-install.sh',
     depends: ['libgtk-3-0', 'libnotify4', 'libnss3', 'libxss1', 'libxtst6', 'xdg-utils',

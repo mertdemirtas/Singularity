@@ -43,7 +43,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libsecret-1-dev libx11-dev libxkbfile-dev libkrb5-dev xvfb pkexec
+          sudo apt-get install -y build-essential libsecret-1-dev libx11-dev libxkbfile-dev libkrb5-dev xvfb pkexec python3-gi gir1.2-gtk-3.0
           # CI has no interactive authentication dialog. Permit only this runner
           # to invoke the real dpkg through Polkit during the installation check.
           printf 'polkit.addRule(function(action, subject) { if (action.id === "org.freedesktop.policykit.exec" && action.lookup("program") === "/usr/bin/dpkg" && subject.user === "%s") return polkit.Result.YES; });\n' "$(id -un)" | sudo tee /etc/polkit-1/rules.d/49-singularity-ci.rules >/dev/null
@@ -108,6 +108,18 @@ jobs:
               executable = '/opt/Singularity/singularity'; resources = '/opt/Singularity/resources';
               const sandbox = fs.statSync('/opt/Singularity/chrome-sandbox');
               assert.equal(sandbox.uid, 0); assert.equal(sandbox.mode & 0o7777, 0o4755);
+              // Verify desktop discovery, not just that an image was packaged.
+              run('/usr/bin/python3', ['-c', `
+          import gi
+          gi.require_version('Gtk', '3.0')
+          from gi.repository import Gtk
+          theme = Gtk.IconTheme.new()
+          theme.set_custom_theme('hicolor')
+          for size in (16, 48, 256, 512):
+              icon = theme.lookup_icon('singularity', size, 0)
+              assert icon is not None, 'Missing desktop icon at size ' + str(size)
+              print('Desktop icon:', size, icon.get_filename())
+          `]);
             } else if (process.platform === 'win32') {
               const destination = path.join(temp, 'Installed Editor');
               // NSIS requires an unquoted final /D argument, even with spaces.

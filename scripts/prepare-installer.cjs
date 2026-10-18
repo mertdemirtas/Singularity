@@ -39,6 +39,7 @@ fs.writeFileSync(path.join(target, 'release-info.json'), JSON.stringify({ nodeVe
   macSigned: process.platform === 'darwin' && Boolean(process.env.CSC_LINK) }));
 if (process.platform === 'darwin') execFileSync(process.execPath, [path.join(__dirname, 'prepare-sparkle.cjs')], { stdio: 'inherit' });
 if (process.platform === 'linux') {
+  execFileSync(process.execPath, [path.join(__dirname, 'prepare-linux-icons.cjs')], { stdio: 'inherit' });
   const template = fs.readFileSync(path.join(root, 'node_modules/app-builder-lib/templates/linux/after-install.tpl'), 'utf8');
   fs.writeFileSync(path.join(target, 'after-install.sh'), template
     + '\n# Keep Chromium sandboxing usable on Ubuntu with restricted user namespaces.\n'
