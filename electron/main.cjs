@@ -15,6 +15,7 @@ const { installedFonts, windowOptions } = require('./platform.cjs');
 const { backendRuntime } = require('./runtime.cjs');
 const { Updates } = require('./updates.cjs');
 const { allocatePort, waitForBackend } = require('./backend-start.cjs');
+const { normalizeAppearance } = require('../extensions/plain-editor-ui/appearance-cache.cjs');
 
 const execFileAsync = promisify(execFile);
 
@@ -135,6 +136,9 @@ function openExternally(url, localOrigin) {
 
 async function start() {
   let savedPort;
+  let startupAppearance;
+  try { startupAppearance = normalizeAppearance(await stateStore().get('singularity.startupAppearance')); }
+  catch (error) { console.warn('Singularity: could not read startup appearance', error); }
   try { savedPort = await stateStore().get('singularity.backendPort'); }
   catch (error) { console.warn('Singularity: could not read cached backend port', error); }
   const port = await allocatePort(savedPort);
@@ -179,11 +183,13 @@ async function start() {
     resizable: true,
     frame: false,
     ...windowOptions(),
+    ...(startupAppearance && process.platform !== 'linux' ? { backgroundColor: startupAppearance.background } : {}),
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      additionalArguments: startupAppearance ? [`--singularity-appearance=${Buffer.from(JSON.stringify(startupAppearance)).toString('base64')}`] : [],
       v8CacheOptions: 'bypassHeatCheckAndEagerCompile',
       preload: path.join(__dirname, 'preload.cjs')
     }

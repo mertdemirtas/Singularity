@@ -1,9 +1,15 @@
 'use strict';
 
 const { contextBridge, ipcRenderer } = require('electron');
+let startupAppearance;
+try {
+  const value = process.argv.find(argument => argument.startsWith('--singularity-appearance='));
+  if (value) startupAppearance = JSON.parse(Buffer.from(value.slice('--singularity-appearance='.length), 'base64').toString('utf8'));
+} catch (error) { console.warn('Singularity: invalid startup appearance', error); }
 
 contextBridge.exposeInMainWorld('plainEditorDesktop', {
   platform: process.platform,
+  startupAppearance,
   updates(action) { return ipcRenderer.invoke('plain-editor:updates', action); },
   onUpdateState(callback) {
     const listener = (_event, state) => callback(state);

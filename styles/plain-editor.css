@@ -1,7 +1,11 @@
 /* Quiet document layout; Theia's split panels retain control of pane sizes. */
 /* The workbench is ready before this otherwise 800 ms fade finishes. */
 .theia-preload{transition-duration:0s!important}
-.plain-restore-panel{display:flex;flex-direction:column;align-items:center;max-width:560px;padding:16px;text-align:center;color:var(--theia-foreground);font-family:var(--theia-ui-font-family)}
+.theia-preload{flex-direction:column;gap:16px;background:var(--plain-startup-background,var(--theia-editor-background));color:var(--plain-startup-foreground,var(--theia-foreground))}
+.theia-preload::after{color:var(--plain-startup-foreground,var(--theia-foreground))}
+body:not(.plain-session-ready){background:var(--plain-startup-background,var(--theia-editor-background))!important}
+body.plain-editor-ready :where(div,span,p,h1,h2,h3,h4,h5,h6,label,small,summary,th,td,a,button,input,textarea,select,option,optgroup,pre,code,kbd,samp,li):not(.codicon):not(.fa):not(.fas):not(.far):not(.fab){font-family:var(--plain-font-family,var(--theia-ui-font-family))!important}
+.plain-restore-panel{max-width:560px;padding:16px;text-align:center;color:var(--theia-foreground);font-family:var(--theia-ui-font-family)}
 .plain-restore-panel button{font:inherit;padding:6px 16px;background:var(--theia-button-background);color:var(--theia-button-foreground);border:1px solid var(--theia-button-border,transparent);border-radius:4px;cursor:pointer}
 .theia-preload.plain-restore-failed::after{display:none}
 /* Trust and other required startup prompts must remain usable over the loader. */

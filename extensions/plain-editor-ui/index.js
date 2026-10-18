@@ -392,8 +392,8 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       const family = fontName(preferences.get('editor.fontFamily', 'monospace'));
       // Set inherited variables on the body, so lazy editor styles and newly
       // created panes cannot replace the selected font with platform defaults.
-      for (const name of ['--theia-ui-font-family', '--theia-code-font-family', '--theia-monospace-font-family']) {
-        document.body.style.setProperty(name, family);
+      for (const name of ['--plain-font-family', '--theia-ui-font-family', '--theia-code-font-family', '--theia-monospace-font-family']) {
+        document.body.style.setProperty(name, family); document.documentElement.style.setProperty(name, family);
       }
       // Theia copies the editor's original default into the terminal schema.
       // Keep that default in sync without overwriting an explicit terminal font.
@@ -403,6 +403,20 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         terminalFontDefault = preferenceSchema.registerOverride('terminal.integrated.fontFamily', undefined, family);
         previous?.dispose();
       }
+    };
+    const cacheAppearance = async () => {
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      const style = getComputedStyle(document.body);
+      const value = require('./appearance-cache.cjs').normalizeAppearance({
+        background: style.getPropertyValue('--theia-editor-background'), foreground: style.getPropertyValue('--theia-foreground'),
+        fontFamily: fontName(preferences.get('editor.fontFamily', 'monospace'))
+      });
+      if (!value) return;
+      document.documentElement.style.setProperty('--plain-startup-background', value.background);
+      document.documentElement.style.setProperty('--plain-startup-foreground', value.foreground);
+      try { localStorage.setItem('singularity.startupAppearance', JSON.stringify(value)); }
+      catch (error) { console.warn('Singularity: could not cache browser appearance', error); }
+      await window.plainEditorDesktop?.writeState('singularity.startupAppearance', value);
     };
     const execute = id => commands.executeCommand(id).catch(error => console.error(`Singularity: ${id}`, error));
     const closeMenu = () => {
@@ -956,7 +970,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           closeMinimap.hidden = !visible;
         };
         preferences.onPreferenceChanged(change => {
-          if (change.preferenceName === 'editor.fontFamily') syncFont();
+          if (change.preferenceName === 'editor.fontFamily') { syncFont(); cacheAppearance().catch(error => console.error('Singularity: could not cache font', error)); }
           if (change.preferenceName === 'editor.minimap.enabled') {
             syncMinimapObserver();
             updateMinimap();
@@ -964,7 +978,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           }
           if (settings.open) syncSettings();
         });
-        themes.onDidColorThemeChange(() => { if (settings.open) syncSettings(); });
+        themes.onDidColorThemeChange(() => { if (settings.open) syncSettings(); cacheAppearance().catch(error => console.error('Singularity: could not cache theme', error)); });
         shell.onDidChangeCurrentWidget(updateMinimap);
         // Retained extension webviews may deliver delayed focus reports after
         // their tab is hidden. Do not let those reports steal the current file.
@@ -1049,6 +1063,8 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         }
         recordNavigation();
         await require('./session-restoration').restoreBeforeReveal({ shell, workspace, preferences, plugins, themes });
+        await document.fonts.ready;
+        await cacheAppearance().catch(error => console.warn('Singularity: could not persist startup appearance', error));
         // Keep native browser surfaces and desktop readiness behind the same
         // boundary as Theia's loading screen, including document recovery.
         app.stateService.reachedState('ready').then(() => {
