@@ -184,6 +184,36 @@ jobs:
             await page.evaluate(() => nativeCommands.executeCommand('plain-editor.export-pdf', nativeShell.mainPanel.currentTitle.owner));
             assert.equal(fs.readFileSync(path.join(project, 'preview.pdf')).subarray(0, 5).toString(), '%PDF-');
             console.log('Native source and rendered Markdown PDF exports passed.');
+            // Tall rendered headings expose competing caret/viewport scrolling.
+            await page.evaluate(uri => nativeCommands.executeCommand('vscode.open', uri), pathToFileURL(markdown).href);
+            await page.evaluate(async () => {
+              window.markdownSource = nativeShell.mainPanel.currentTitle.owner;
+              markdownSource.editor.getControl().setValue(Array.from({ length: 120 }, (_, index) => '# Heading ' + index).join('\n') + '\n');
+              await nativeCommands.executeCommand('markdown.showPreviewToSide', markdownSource.editor.uri.codeUri);
+            });
+            let markdownFrame;
+            const previewDeadline = Date.now() + 20000;
+            while (!markdownFrame) {
+              for (const frame of page.frames()) if (await frame.evaluate(() => !!document.getElementById('vscode-markdown-preview-data')).catch(() => false)) { markdownFrame = frame; break; }
+              if (Date.now() > previewDeadline) throw new Error('Markdown split preview did not load.');
+              if (!markdownFrame) await delay(100);
+            }
+            await page.evaluate(() => {
+              const editor = markdownSource.editor.getControl(), line = editor.getModel().getLineCount();
+              editor.setPosition({ lineNumber: line, column: 1 }); editor.revealLine(line); editor.focus();
+            });
+            await delay(600);
+            await markdownFrame.evaluate(() => {
+              window.scrollSamples = [scrollY]; window.sampleScrolling = true;
+              const sample = () => { scrollSamples.push(scrollY); if (sampleScrolling) requestAnimationFrame(sample); }; sample();
+            });
+            for (let index = 0; index < 6; index++) { await page.keyboard.press('Enter'); await page.keyboard.type('New paragraph ' + index, { delay: 110 }); await delay(150); }
+            await delay(500);
+            const scrollSamples = await markdownFrame.evaluate(() => { sampleScrolling = false; return scrollSamples; });
+            assert(scrollSamples.every((value, index) => index === 0 || value >= scrollSamples[index - 1] - 100), 'Appending Markdown must not jump backwards.');
+            assert(await page.evaluate(() => markdownSource.editor.getControl().hasTextFocus()), 'Typing must retain source focus.');
+            await page.keyboard.down(modifier); await page.keyboard.press('s'); await page.keyboard.up(modifier);
+            console.log('Native Markdown end-of-file typing and preview alignment passed.');
             await page.screenshot({ path: path.join(artifact, 'desktop.png') });
             await page.click('[data-plain-action="window-close"]');
             console.log(`Native ${process.platform}/${process.arch}: fonts, file path with spaces, save shortcut, and Python terminal passed.`);

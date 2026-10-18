@@ -190,7 +190,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
   require('./view-interaction')(rebind);
   require('./editor-lifecycle')(rebind);
   require('./app-fonts')(rebind);
-  require('./markdown-preview-sync')();
+  require('./markdown-preview-sync')(bind);
   if (window.plainEditorDesktop) rebind(LocalStorageService).toConstantValue({
     getData: async (key, fallback) => {
       const value = await window.plainEditorDesktop.readState(key);
