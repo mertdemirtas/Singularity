@@ -28,6 +28,7 @@ const MORE_ACTIONS = [
   ['Remote', [['Fetch all', 'git.fetchAll'], ['Fetch and prune', 'git.fetchPrune'], ['Pull with rebase', 'git.pullRebase'], ['Push to…', 'git.pushTo'], ['Push tags', 'git.pushTags']]],
   ['Tags and identity', [['Create tag…', 'git.createTag'], ['Delete tag…', 'git.deleteTag'], ['Configure commit identity…', 'git.singularityConfigureIdentity']]]
 ];
+const REMOTE_COMMANDS = new Set(['git.pull','git.push','git.fetch','git.fetchAll','git.fetchPrune','git.pullRebase','git.pushTo','git.pushTags']);
 
 class GitWidget extends BaseWidget {
   constructor(container, commands) {
@@ -42,13 +43,13 @@ class GitWidget extends BaseWidget {
       if (this.saveable.dirty) throw new Error(this.notice || 'The resolution was not saved.');
     } };
     this.section = 'changes'; this.listeners = []; this.generation = 0; this.fileLimit = 100; this.previewGeneration = 0;
-    this.node.innerHTML = `<div class="plain-git-repository"><label><small>Repository</small><select aria-label="Repository"></select></label><button class="plain-git-branch" data-git-section="branches" title="Manage branches"><small>Current branch</small><span class="plain-git-head"></span></button><div class="plain-git-primary"><button data-git-command="git.pull">Pull</button><button data-git-command="git.push">Push</button><button data-git-command="git.fetch">Fetch</button><button data-git-action="more" title="More Git actions">More…</button></div><button data-git-action="refresh" title="Refresh Git" aria-label="Refresh Git"><span class="codicon codicon-refresh" aria-hidden="true"></span></button></div>
+    this.node.innerHTML = `<div class="plain-git-repository"><label><small>Repository</small><select aria-label="Repository"></select></label><button class="plain-git-branch" data-git-section="branches" title="Manage branches"><small>Current branch</small><span class="plain-git-head"></span></button><small data-git-local hidden title="Commits stay on this computer. No GitHub account or remote is required.">Local only</small><div class="plain-git-primary"><button data-git-command="git.pull">Pull</button><button data-git-command="git.push">Push</button><button data-git-command="git.fetch">Fetch</button><button data-git-action="more" title="More Git actions">More…</button></div><button data-git-action="refresh" title="Refresh Git" aria-label="Refresh Git"><span class="codicon codicon-refresh" aria-hidden="true"></span></button></div>
       <nav aria-label="Git sections">${['changes','branches','history','remotes'].map(section => `<button data-git-section="${section}">${section[0].toUpperCase()+section.slice(1)}</button>`).join('')}</nav>
       <div class="plain-git-status" role="status" aria-live="polite"></div>
       <div class="plain-git-merge" hidden></div><div class="plain-git-more" id="plain-git-more" role="menu" aria-label="More Git actions" hidden></div>
       <div class="plain-git-content"><div class="plain-git-sidebar"><div class="plain-git-actions"></div><div class="plain-git-list"></div>
         <div class="plain-git-commit"><label for="plain-git-message">Commit message</label><textarea id="plain-git-message" rows="3" placeholder="Describe your changes"></textarea><button data-git-action="commit" class="theia-button">Commit staged changes</button><small>Stage the files you want to include before committing.</small></div>
-      </div><div class="plain-git-main-splitter" aria-label="Resize commit list and changes"></div><section class="plain-git-review" aria-label="Review changes"><div class="plain-git-review-title"></div><div class="plain-git-review-body"></div></section></div><div class="plain-git-empty" hidden><p>Open a folder from Files to work with Git, or clone a repository.</p><button data-git-command="git.init">Initialize repository…</button><button data-git-command="git.clone">Clone repository…</button><button data-git-action="github-create">Create GitHub repository…</button></div>`;
+      </div><div class="plain-git-main-splitter" aria-label="Resize commit list and changes"></div><section class="plain-git-review" aria-label="Review changes"><div class="plain-git-review-title"></div><div class="plain-git-review-body"></div></section></div><div class="plain-git-empty" hidden><p>Initialize a local repository to track changes in your folder. No GitHub account or remote is needed.</p><p>Open your project folder from Files first, or choose a folder when initializing.</p><button data-git-command="git.init">Initialize local repository…</button><button data-git-command="git.clone">Clone repository…</button><button data-git-action="github-create">Create GitHub repository…</button></div>`;
     this.select = this.node.querySelector('select'); this.status = this.node.querySelector('[role="status"]');
     this.fullscreenBar=element('div',undefined,'plain-git-fullscreen-bar');this.fullscreenBar.hidden=true;
     this.fullscreenTitle=element('strong');this.fullscreenBar.append(this.fullscreenTitle);
@@ -208,7 +209,7 @@ class GitWidget extends BaseWidget {
     for (const button of this.node.querySelectorAll('[data-git-section]')) button.setAttribute('aria-pressed', String(button.dataset.gitSection === this.section));
     this.node.querySelector('.plain-git-commit').hidden = this.section !== 'changes';
     this.node.querySelector('.plain-git-branch').disabled = !repository;
-    if (!repository) { this.closeBranchMenu(); this.head.textContent = 'No repository'; this.viewKey = undefined; return; }
+    if (!repository) { this.closeBranchMenu(); this.head.textContent = 'No repository'; this.info = undefined; this.node.querySelector('[data-git-local]').hidden = true; this.viewKey = undefined; return; }
     this.watchProvider();
     if (document.activeElement !== this.message) this.message.value = repository.input.value;
     this.node.setAttribute('aria-busy', 'true');
@@ -220,7 +221,13 @@ class GitWidget extends BaseWidget {
       this.status.textContent = this.notice || '';
       const head = info.head;
       this.info = info;
-      for (const button of this.node.querySelectorAll('.plain-git-primary [data-git-command]')) button.disabled = button.dataset.gitCommand === 'git.push' ? !head?.commit : !info.remoteCount;
+      this.node.querySelector('[data-git-local]').hidden = !!info.remoteCount;
+      for (const button of this.node.querySelectorAll('[data-git-command]')) {
+        const command = button.dataset.gitCommand;
+        if (!REMOTE_COMMANDS.has(command)) continue;
+        button.disabled = !info.remoteCount || (command === 'git.push' && !head?.commit);
+        button.title = info.remoteCount ? '' : 'Add a remote in Remotes to use this action. Local commits do not need one.';
+      }
       this.head.textContent = (head?.name || head?.commit?.slice(0,7) || 'No commits yet') + (head?.ahead ? ` · ${head.ahead} ahead` : '') + (head?.behind ? ` · ${head.behind} behind` : '');
       this.node.querySelector('[data-git-action="commit"]').textContent = info.merging ? 'Finish merge' : `Commit to ${head?.name || 'branch'}`;
       this.mergeBanner.hidden = !info.merging && !info.conflicts;
@@ -437,7 +444,7 @@ class GitWidget extends BaseWidget {
         this.backToGraph();
       }, current || branch.remote || this.info.merging]
     ];
-    if (current) actions.push(['Pull', () => this.run('git.pull'), !this.info.remoteCount], ['Push', () => this.run('git.push')]);
+    if (current) actions.push(['Pull', () => this.run('git.pull'), !this.info.remoteCount], ['Push', () => this.run('git.push'), !this.info.remoteCount || !head?.commit]);
     this.openGitMenu(event,anchor,branch.name,actions);
   }
   openCommitMenu(event, commit, anchor) {
@@ -603,7 +610,7 @@ class GitWidget extends BaseWidget {
     for (const remote of info.remotes || []) {
       const row = element('div', undefined, 'plain-git-history-row'); row.append(element('strong', remote.name)); row.append(element('span', remote.fetchUrl || remote.pushUrl || '')); this.list.append(row);
     }
-    if (!info.remotes?.length) this.list.append(element('p', 'No remotes. Add one to push and pull changes.', 'plain-git-muted'));
+    if (!info.remotes?.length) this.list.append(element('p', 'This repository is local only. You can commit, use branches, and review history without an account. Add a remote only when you want to push or pull changes.', 'plain-git-muted'));
   }
   showGitHubForm() {
     if (this.busy || this.blockUnsavedResolution()) return;
@@ -640,7 +647,13 @@ class GitWidget extends BaseWidget {
   run(command, ...args) {
     const root = this.root;
     if (!root && !['git.init','git.clone'].includes(command)) return;
-    return this.perform(() => this.commands.executeCommand(command, ...(['git.init','git.clone'].includes(command) ? [] : [new URI(root).codeUri]), ...args),this.confirmation(command));
+    if (REMOTE_COMMANDS.has(command) && this.info?.remoteCount === 0) {
+      this.status.textContent = 'This repository is local only. Add a remote in Remotes when you want to push or pull.'; return;
+    }
+    // Bundled Git's true argument initializes the open folder directly; with
+    // multiple workspace folders it still asks which folder to initialize.
+    const commandArgs = command === 'git.init' ? [true, ...args] : command === 'git.clone' ? args : [new URI(root).codeUri, ...args];
+    return this.perform(() => this.commands.executeCommand(command, ...commandArgs),this.confirmation(command));
   }
   confirmation(command,context) {
     return gitConfirmation(command,{repository:this.root?new URI(this.root).path.toString():undefined,branch:this.info?.head?.name,merging:this.info?.merging,...context});
