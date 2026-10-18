@@ -10,10 +10,13 @@ module.exports = function limitEditorScrolling(editorManager) {
     registered.add(editor);
     const apply = () => {
       const padding = editor.getOption(EditorOption.padding);
+      // Keep the first line clear of the tab-row separator. Use Monaco's
+      // padding so cursor positions, selections, and scrolling stay aligned.
+      const top = Math.max(4, padding.top);
       // Leave ten lines of breathing room instead of Monaco's extra viewport.
       const bottom = Math.min(1000, editor.getOption(EditorOption.lineHeight) * 10);
-      if (editor.getOption(EditorOption.scrollBeyondLastLine) || padding.bottom !== bottom) {
-        editor.updateOptions({ scrollBeyondLastLine: false, padding: { top: padding.top, bottom } });
+      if (editor.getOption(EditorOption.scrollBeyondLastLine) || padding.top !== top || padding.bottom !== bottom) {
+        editor.updateOptions({ scrollBeyondLastLine: false, padding: { top, bottom } });
       }
     };
     const listener = editor.onDidChangeConfiguration(event => {

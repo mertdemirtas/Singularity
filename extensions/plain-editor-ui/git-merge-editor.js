@@ -49,7 +49,7 @@ class MergeResolutionEditor {
     const makeModel = (name,text) => monaco.editor.createModel(text,language,monaco.Uri.parse(`singularity-merge:/${id}/${name}/${encodeURIComponent(file)}`));
     try {
     this.currentModel = makeModel('current',details.current.text); this.incomingModel = makeModel('incoming',details.incoming.text); this.resultModel = makeModel('result',details.result);
-    const options = {...this.fontOptions(),minimap:{enabled:false},scrollBeyondLastLine:false,wordWrap:'off',lineNumbers:'on',glyphMargin:true,automaticLayout:false,contextmenu:true};
+    const options = {...this.fontOptions(),padding:{top:4,bottom:4},minimap:{enabled:false},scrollBeyondLastLine:false,wordWrap:'off',lineNumbers:'on',glyphMargin:true,automaticLayout:false,contextmenu:true};
     this.diffEditor = monaco.editor.createDiffEditor(this.root.querySelector('[data-merge-comparison]'), {
       ...options,readOnly:true,originalEditable:false,renderSideBySide:true,renderSideBySideInlineBreakpoint:0,
       useInlineViewWhenSpaceIsLimited:false,enableSplitViewResizing:true,ignoreTrimWhitespace:false,maxComputationTime:2000,hideUnchangedRegions:{enabled:false}
