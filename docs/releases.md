@@ -19,12 +19,14 @@ You only need the installer. The `.zip`, `.blockmap`, and update metadata files 
 2. Open a terminal in the folder containing the download and run:
 
    ```sh
-   sudo apt install ./Singularity-0.1.3-linux-amd64.deb
+   sudo apt install ./Singularity-0.1.4-linux-amd64.deb
    ```
 
 3. Open **Singularity** from your applications menu.
 
 The editor's Linux package is named `singularity-editor`. Ubuntu's `singularity` package is an unrelated game; do not use `apt install singularity` to install the editor. If a system upgrade replaced an older editor with that game, reinstall using the downloaded `.deb`. Your editor settings and files are kept.
+
+**Upgrading from Linux versions 0.1.0–0.1.3:** install the 0.1.4 `.deb` manually once to migrate the package name. An older in-app updater may report an error during this migration. Later updates use the new package name.
 
 ## Windows
 

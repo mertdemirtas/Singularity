@@ -1,8 +1,9 @@
-## Singularity 0.1.3
+## Singularity 0.1.4
 
-- Export rendered Markdown previews, text, and code to PDF from the tab toolbar, including unsaved edits. In Markdown previews, the button sits beside **Show Source**.
-- Standard PDFs use a consistent light palette regardless of the app theme. Right-click **Export PDF** and choose **Export Dark PDF** for a fixed dark palette, saved as `filename-dark.pdf`.
-- PDFs save to the project folder. Without an open project, choose a folder when prompted. Replacing an existing PDF requires confirmation. Text and code exports support files up to 20 MB.
-- Fixed split Markdown previews jumping while typing, especially when adding lines at the end of a file or editing wrapped paragraphs. The preview follows the caret without taking keyboard focus, and manual scrolling, undo, document switching, and preview position restoration remain supported.
+- Fixed Ubuntu system upgrades replacing the editor with an unrelated game named `singularity`. The editor now uses the distinct Linux package, executable, launcher, and icon identifier `singularity-editor`; its displayed name remains **Singularity**.
+- Older editor packages migrate to the new name while preserving settings and files. The unrelated Ubuntu game can remain installed alongside the editor.
+- Linux update verification now checks the correct editor package. Installer checks also verify coexistence with the Ubuntu game and discovery of the editor's launcher and icons.
 
-See [installation and updates](https://github.com/mertdemirtas/Singularity/blob/main/docs/releases.md) for downloads and update instructions.
+**Linux users upgrading from 0.1.0–0.1.3:** download and install the 0.1.4 `.deb` once, even if the older in-app updater reports an error. Subsequent updates use the new package name. Windows and macOS users can update normally.
+
+See [installation and updates](https://github.com/mertdemirtas/Singularity/blob/main/docs/releases.md) for downloads and instructions.
