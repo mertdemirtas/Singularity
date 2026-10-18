@@ -5,6 +5,7 @@ const { mergeState, runGitOperation } = require('./git-operations.cjs');
 const { commitDetails, commitPreview, branchGraph } = require('./git-history.cjs');
 const { conflictDetails, resolveConflict } = require('./git-conflicts.cjs');
 const { createGitHubService } = require('./git-github.cjs');
+const { startupSnapshot } = require('./git-startup.cjs');
 
 const COMMIT_COMMAND = /^git\.commit(?:Staged|All|Empty)?(?:Signed|Amend)?(?:NoVerify)?$/;
 const CONFIGURE_IDENTITY = 'git.singularityConfigureIdentity';
@@ -107,6 +108,7 @@ function adaptGitApi(api, plugin) {
         api.window.showInformationMessage('Git commit identity saved for this repository.');
       }, true));
       const inspect = api.commands.registerCommand('git.singularityInspect', async (root, section = 'changes', request) => {
+        if (section === 'startup') return startupSnapshot(git());
         const repository = await repositoryFor(root);
         if (!repository) return undefined;
         if (section === 'preview') return gitPreview(repository, api, request);

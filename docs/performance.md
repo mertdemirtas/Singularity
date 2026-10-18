@@ -11,6 +11,8 @@ extensions, and the session being restored.
 Measured from launching the desktop process until the workbench reports ready.
 These figures use the bundled extensions and an empty session.
 
+These measurements predate the session restoration gate. Current startup keeps the loading screen visible until settings, restored views, and their initial data are ready. Larger sessions can take longer; the figures below do not measure that additional work.
+
 | Case | Time |
 | --- | ---: |
 | Earlier build, two fresh-profile runs | 4.09 s average |

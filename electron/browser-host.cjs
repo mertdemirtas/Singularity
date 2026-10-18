@@ -75,8 +75,11 @@ function installBrowserHost(getWindow, { history = new BrowserHistory() } = {}) 
     const wc = view.webContents;
     if (action === 'navigate') {
       const url = browserInput(request.url);
-      wc.loadURL(url).catch(error => publish(id, view, error.message));
+      view.navigation = wc.loadURL(url).catch(error => publish(id, view, error.message));
       return { ...state(id, view), requestedUrl: url };
+    } else if (action === 'ready') {
+      await view.navigation;
+      return state(id, view);
     } else if (action === 'bounds') {
       const bounds = request.bounds;
       if (!bounds || !['x', 'y', 'width', 'height'].every(key => Number.isFinite(bounds[key]))) throw new Error('Invalid browser bounds.');

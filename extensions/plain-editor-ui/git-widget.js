@@ -139,8 +139,9 @@ class GitWidget extends BaseWidget {
       variable: '--plain-git-sidebar-width', value: this.outerFraction, onChange: value => this.outerFraction = value
     });
   }
-  storeState() { return { outerFraction: this.outerFraction, filesFraction: this.filesFraction, mergeLayout:this.mergeLayout,mergeRows:this.mergeRows,mergeColumns:this.mergeColumns }; }
+  storeState() { return { section: this.section, outerFraction: this.outerFraction, filesFraction: this.filesFraction, mergeLayout:this.mergeLayout,mergeRows:this.mergeRows,mergeColumns:this.mergeColumns }; }
   restoreState(state) {
+    if (['changes','branches','history','remotes'].includes(state?.section)) this.section = state.section;
     for (const key of ['outerFraction','filesFraction','mergeRows','mergeColumns']) if (Number.isFinite(state?.[key]) && state[key] > 0 && state[key] < 1) this[key] = state[key];
     if (['columns','rows'].includes(state?.mergeLayout)) this.mergeLayout = state.mergeLayout;
     this.bindOuterSplitter();
@@ -160,9 +161,15 @@ class GitWidget extends BaseWidget {
       this.listening = true;
       const selected = this.scm.selectedRepository;
       if (selected?.provider.id === 'git') this.root = selected.provider.rootUri;
-      this.listeners.push(this.scm.onDidAddRepository(() => this.schedule()), this.scm.onDidRemoveRepository(() => this.schedule()));
+      let ready = this.commands.isEnabled('git.singularityInspect');
+      this.listeners.push(this.scm.onDidAddRepository(() => this.schedule()), this.scm.onDidRemoveRepository(() => this.schedule()),
+        this.commands.onCommandsChanged(() => {
+          const next = this.commands.isEnabled('git.singularityInspect');
+          if (next !== ready) { ready = next; this.schedule(); }
+        }));
     }
     this.watchProvider();
+    if (this.isHidden) return;
     return this.refresh();
   }
   dispose() {
@@ -175,12 +182,24 @@ class GitWidget extends BaseWidget {
     this.listeners.splice(0).forEach(listener => listener.dispose()); super.dispose();
   }
   onActivateRequest(message) { super.onActivateRequest(message); this.select.focus(); }
+  // Restored visible tabs are attached without a separate after-show message.
+  // Start repository listeners here too, before plugins finish registering Git.
+  onAfterAttach(message) { super.onAfterAttach(message); this.open(); }
   onAfterShow(message) { super.onAfterShow(message); this.open(); }
+  async prepareForStartup() {
+    this.restoring = true; clearTimeout(this.timer); this.generation++;
+    try {
+      if (!this.commands.isEnabled('git.singularityInspect')) throw new Error('Git is unavailable. Check that the built-in Git extension is enabled.');
+      const snapshot = await this.commands.executeCommand('git.singularityInspect', undefined, 'startup');
+      await require('./git-startup.cjs').waitForResources(this.scm, snapshot);
+      if (!await this.refresh()) throw new Error(this.status.textContent || 'Could not restore Git data.');
+    } finally { this.restoring = false; }
+  }
   watchProvider() {
     this.providerListener?.dispose(); this.providerListener = this.repository()?.provider.onDidChange(() => this.schedule());
   }
   schedule() {
-    if (this.isDisposed || this.isHidden || this.busy) return;
+    if (this.isDisposed || this.isHidden || this.busy || this.restoring) return;
     clearTimeout(this.timer); this.timer = setTimeout(() => this.refresh(), 150);
   }
   button(parent, label, action) {
@@ -209,9 +228,10 @@ class GitWidget extends BaseWidget {
     for (const button of this.node.querySelectorAll('[data-git-section]')) button.setAttribute('aria-pressed', String(button.dataset.gitSection === this.section));
     this.node.querySelector('.plain-git-commit').hidden = this.section !== 'changes';
     this.node.querySelector('.plain-git-branch').disabled = !repository;
-    if (!repository) { this.closeBranchMenu(); this.head.textContent = 'No repository'; this.info = undefined; this.node.querySelector('[data-git-local]').hidden = true; this.viewKey = undefined; return; }
+    if (!repository) { this.closeBranchMenu(); this.head.textContent = 'No repository'; this.info = undefined; this.node.querySelector('[data-git-local]').hidden = true; this.viewKey = undefined; return true; }
     this.watchProvider();
     if (document.activeElement !== this.message) this.message.value = repository.input.value;
+    if (!this.commands.isEnabled('git.singularityInspect')) { this.status.textContent = 'Loading Git…'; return; }
     this.node.setAttribute('aria-busy', 'true');
     if (!this.viewKey) this.status.textContent = 'Loading…';
     try {
@@ -244,10 +264,10 @@ class GitWidget extends BaseWidget {
         if (this.section === 'changes' && this.selectedResource && !this.editingConflict) {
           for (const group of repository.provider.groups) {
             const resource = group.resources.find(item => `${group.id}:${item.sourceUri}` === this.selectedResource);
-            if (resource) this.selectResource(resource, group.id, true);
+            if (resource) await this.selectResource(resource, group.id, true);
           }
         }
-        return;
+        return true;
       }
       this.closeBranchMenu(); this.viewKey = viewKey; this.list.replaceChildren(); this.actions.replaceChildren();
       const summaries = {
@@ -258,14 +278,15 @@ class GitWidget extends BaseWidget {
       };
       const keepConflict = this.section === 'changes' && this.editingConflict && repository.provider.groups.some(group => group.id === 'merge' && group.resources.some(resource => `merge:${resource.sourceUri}` === this.selectedResource));
       if (!keepConflict) { this.previewGeneration++; this.editingConflict = false; this.showReview(...summaries[this.section]); }
-      if (this.section === 'changes') this.renderChanges(repository);
+      if (this.section === 'changes') await this.renderChanges(repository);
       if (this.section === 'branches') await this.renderBranches();
-      if (this.section === 'history') this.renderHistory(info);
+      if (this.section === 'history') await this.renderHistory(info);
       if (this.section === 'remotes') this.renderRemotes(info);
-    } catch (error) { if (generation === this.generation) this.status.textContent = error.message; }
+      return true;
+    } catch (error) { if (generation === this.generation) this.status.textContent = error.message; return false; }
     finally { if (generation === this.generation) this.node.removeAttribute('aria-busy'); }
   }
-  renderChanges(repository) {
+  async renderChanges(repository) {
     const order={merge:0,index:1,workingTree:2,untracked:3};
     const groups = repository.provider.groups.filter(group => group.resources.length).slice().sort((a,b)=>(order[a.id]??4)-(order[b.id]??4));
     if (!groups.length) { this.list.append(element('p', 'No changes', 'plain-git-muted')); this.showReview('Your working tree is clean', 'Changes you make to this repository will appear here. You can review your history or create a branch to start something new.'); }
@@ -296,7 +317,7 @@ class GitWidget extends BaseWidget {
       }
       if (group.resources.length > this.fileLimit) this.button(files, 'Show more files…', () => { this.fileLimit += 100; this.viewKey = undefined; this.refresh(); });
     }
-    if (selected && !(this.editingConflict && selected.group === 'merge')) this.selectResource(selected.resource, selected.group);
+    if (selected && !(this.editingConflict && selected.group === 'merge')) await this.selectResource(selected.resource, selected.group);
   }
   showReview(title, message) {
     this.mergeEditor?.dispose(); this.mergeEditor = undefined; this.saveResolution = undefined;
@@ -518,7 +539,7 @@ class GitWidget extends BaseWidget {
       }
     } catch (error) { if (generation === this.previewGeneration) this.showReview('Branch graph',error.message); }
   }
-  renderHistory(info) {
+  async renderHistory(info) {
     let selected;
     for (const commit of info.history || []) {
       const row = this.button(this.list, '', () => this.selectCommit(commit.id)); row.className = 'plain-git-history-row';
@@ -531,7 +552,7 @@ class GitWidget extends BaseWidget {
     if (!info.history?.length) this.list.append(element('p', 'No commits yet.', 'plain-git-muted'));
     if (this.historyOffset) this.button(this.actions, 'Newer commits', () => { this.historyOffset = Math.max(0, this.historyOffset - 20); this.refresh(); });
     if (info.historyHasMore) this.button(this.actions, 'Older commits', () => { this.historyOffset = (this.historyOffset || 0) + 20; this.refresh(); });
-    if (selected) this.selectCommit(selected.id);
+    if (selected) await this.selectCommit(selected.id);
   }
   async selectCommit(id, offset = 0) {
     const generation = ++this.previewGeneration; this.selectedCommit = id; this.editingConflict = false;
@@ -573,7 +594,7 @@ class GitWidget extends BaseWidget {
       }
       if (offset) this.button(files, 'Previous files', () => this.selectCommit(id, Math.max(0, offset - 100)));
       if (details.nextOffset !== undefined) this.button(files, 'More files', () => this.selectCommit(id, details.nextOffset));
-      if (details.files.length) selectFile(details.files[0]); else diff.append(element('p', 'This commit has no file changes.', 'plain-git-review-note'));
+      if (details.files.length) await selectFile(details.files[0]); else diff.append(element('p', 'This commit has no file changes.', 'plain-git-review-note'));
     } catch (error) { if (generation === this.previewGeneration) this.showReview(id.slice(0, 7), error.message); }
   }
   confirmMerge(branch, head) {

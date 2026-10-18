@@ -66,7 +66,7 @@ class BrowserWidget extends BaseWidget {
     this.overlays = new MutationObserver(() => this.syncBounds());
     this.overlays.observe(document.body, { attributes: true, attributeFilter: ['open', 'hidden', 'class'], childList: true, subtree: true });
     this.renderHistory({ visited: [], closed: [] });
-    this.loadHistory();
+    this.historyReady = this.loadHistory();
   }
   async loadHistory(clear = false) {
     if (!window.plainEditorDesktop?.browser) return;
@@ -129,7 +129,7 @@ class BrowserWidget extends BaseWidget {
     const overlay = [...document.querySelectorAll('dialog[open], .dialogBlock, #plain-menu:not([hidden]), #plain-open-menu:not([hidden]), #plain-extension-view-context:not([hidden])')]
       .some(node => node.getBoundingClientRect().width > 0);
     const update = { bounds: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-      visible: this.url !== 'about:blank' && this.isVisible && !overlay };
+      visible: document.body.classList.contains('plain-session-ready') && this.url !== 'about:blank' && this.isVisible && !overlay };
     const signature = JSON.stringify(update);
     if (signature === this.boundsSignature) return;
     this.boundsSignature = signature;
@@ -138,7 +138,14 @@ class BrowserWidget extends BaseWidget {
   }
   onAfterAttach(message) {
     super.onAfterAttach(message);
-    if (this.url !== 'about:blank') this.navigate(this.url);
+    if (this.url !== 'about:blank') this.initialNavigation = this.navigate(this.url);
+  }
+  async prepareForStartup() {
+    await this.historyReady;
+    if (this.url !== 'about:blank') {
+      await this.initialNavigation;
+      await this.request('ready');
+    }
   }
   onAfterShow(message) { super.onAfterShow(message); this.syncBounds(); }
   onActivateRequest(message) { super.onActivateRequest(message); this.address.focus(); }

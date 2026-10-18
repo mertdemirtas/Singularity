@@ -189,6 +189,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
   require('./large-files')(rebind);
   require('./view-interaction')(rebind);
   require('./editor-lifecycle')(rebind);
+  require('./app-fonts')(rebind);
   if (window.plainEditorDesktop) rebind(LocalStorageService).toConstantValue({
     getData: async (key, fallback) => {
       const value = await window.plainEditorDesktop.readState(key);
@@ -694,7 +695,10 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       }
     };
     return {
-      onStart() { require('./startup')(container); },
+      onStart() {
+        this.releaseStartupInput = require('./session-restoration').guardStartupInput();
+        require('./startup')(container);
+      },
       onDidInitializeLayout: async app => {
         shell = app.shell;
         await preferences.ready;
@@ -742,7 +746,6 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
             }
             window.plainEditorDesktop.closeReviewed(approved);
           });
-          window.plainEditorDesktop.ready();
         }
         // The document tabs become the title bar; the action rail reserves space
         // through the shell's layout padding, keeping pane resizing accurate.
@@ -1045,6 +1048,14 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           }
         }
         recordNavigation();
+        await require('./session-restoration').restoreBeforeReveal({ shell, workspace, preferences, plugins, themes });
+        // Keep native browser surfaces and desktop readiness behind the same
+        // boundary as Theia's loading screen, including document recovery.
+        app.stateService.reachedState('ready').then(() => {
+          document.body.classList.add('plain-session-ready');
+          this.releaseStartupInput?.();
+          window.plainEditorDesktop?.ready();
+        }).catch(error => console.error('Singularity: could not reveal restored session', error));
       }
     };
   }).inSingletonScope();

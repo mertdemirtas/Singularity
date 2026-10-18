@@ -1,6 +1,12 @@
 /* Quiet document layout; Theia's split panels retain control of pane sizes. */
 /* The workbench is ready before this otherwise 800 ms fade finishes. */
 .theia-preload{transition-duration:0s!important}
+.plain-restore-panel{display:flex;flex-direction:column;align-items:center;max-width:560px;padding:16px;text-align:center;color:var(--theia-foreground);font-family:var(--theia-ui-font-family)}
+.plain-restore-panel button{font:inherit;padding:6px 16px;background:var(--theia-button-background);color:var(--theia-button-foreground);border:1px solid var(--theia-button-border,transparent);border-radius:4px;cursor:pointer}
+.theia-preload.plain-restore-failed::after{display:none}
+/* Trust and other required startup prompts must remain usable over the loader. */
+body:not(.plain-session-ready) .dialogOverlay{z-index:60000}
+body:not(.plain-session-ready) :is(#theia-app-shell,#plain-header,#plain-app-navigation){visibility:hidden}
 body.plain-editor-ready #theia-top-panel{visibility:hidden!important}
 body.plain-editor-ready #theia-statusBar{display:none!important}
 body.plain-editor-ready #theia-left-content-panel.theia-mod-collapsed,body.plain-editor-ready #theia-right-content-panel.theia-mod-collapsed{min-width:0!important;max-width:0!important}
