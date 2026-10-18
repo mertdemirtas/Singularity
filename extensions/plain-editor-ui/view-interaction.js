@@ -1,7 +1,7 @@
 'use strict';
 
 const { decorate, injectable } = require('@theia/core/shared/inversify');
-const { ViewContainer, ViewContainerIdentifier } = require('@theia/core/lib/browser/view-container');
+const { ViewContainer, ViewContainerIdentifier, ViewContainerPart } = require('@theia/core/lib/browser/view-container');
 
 class InteractiveViewContainer extends ViewContainer {
   createPart(...args) {
@@ -18,6 +18,9 @@ class InteractiveViewContainer extends ViewContainer {
 decorate(injectable(), InteractiveViewContainer);
 
 module.exports = rebind => {
+  // Match the section's 24 px line plus 4 px padding on each side in CSS.
+  // The layout also uses this height for collapsed parts and restored sizes.
+  ViewContainerPart.HEADER_HEIGHT = 32;
   rebind(ViewContainer.Factory).toFactory(({ container }) => options => {
     const child = container.createChild();
     child.bind(ViewContainerIdentifier).toConstantValue(options);

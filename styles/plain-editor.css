@@ -21,7 +21,10 @@ body.plain-editor-ready #theia-bottom-split-panel>.lm-SplitPanel-handle{min-heig
 body.plain-editor-ready #theia-left-content-panel{background:var(--theia-sideBar-background);border-right:1px solid var(--theia-panel-border)}
 body.plain-editor-ready #theia-left-content-panel .theia-sidepanel-toolbar{box-sizing:border-box;min-height:40px;padding:4px 8px;border-bottom:1px solid var(--theia-panel-border)}
 body.plain-editor-ready #theia-left-content-panel .theia-sidepanel-toolbar .theia-label,body.plain-editor-ready #theia-left-content-panel .theia-view-container-part-header .label{text-transform:none;font-weight:600;letter-spacing:0}
-body.plain-editor-ready #theia-left-content-panel .theia-view-container-part-header{box-sizing:border-box;min-height:30px;padding:4px 8px}
+/* Match ViewContainerPart.HEADER_HEIGHT so collapsed sections cannot overlap. */
+body.plain-editor-ready .theia-view-container{--theia-view-container-title-height:32px;--theia-view-container-content-height:calc(100% - var(--theia-view-container-title-height))}
+body.plain-editor-ready .theia-view-container-part-header{box-sizing:border-box;height:32px;min-height:32px;line-height:24px;padding:4px 8px}
+body.plain-editor-ready :is(#theia-left-content-panel,#theia-right-content-panel) .theia-view-container{box-sizing:border-box;padding:4px}
 body.plain-editor-ready #theia-left-content-panel .theia-TreeNode{box-sizing:border-box;margin:0 5px;width:calc(100% - 10px);border-radius:6px}
 body.plain-editor-ready #theia-left-content-panel .theia-TreeNode:hover{background:var(--theia-list-hoverBackground)}
 body.plain-editor-ready #theia-bottom-content-panel{border-top:1px solid var(--theia-panel-border)}
@@ -290,7 +293,6 @@ body.plain-editor-ready #theia-right-content-panel .theia-sidepanel-toolbar{box-
 #theia-right-content-panel .plain-side-close:hover{background:var(--theia-toolbar-hoverBackground)}
 body.plain-side-peek #theia-right-content-panel{z-index:5;border-radius:10px 0 0 10px;box-shadow:-3px 0 16px #0002}
 body.plain-editor-ready #theia-right-content-panel .theia-view-container-part-header .label{text-transform:none;font-weight:600;letter-spacing:0}
-body.plain-editor-ready #theia-right-content-panel .theia-view-container-part-header{box-sizing:border-box;min-height:30px;padding:4px 8px}
 body.plain-editor-ready #theia-right-content-panel .theia-TreeNode{box-sizing:border-box;margin:0 5px;width:calc(100% - 10px);border-radius:6px}
 body.plain-editor-ready #theia-right-content-panel .theia-TreeNode:hover{background:var(--theia-list-hoverBackground)}
 
