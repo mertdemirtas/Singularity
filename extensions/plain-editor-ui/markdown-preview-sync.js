@@ -5,7 +5,15 @@ function followEditedLine() {
   const metadata = document.getElementById('vscode-markdown-preview-data');
   const settings = JSON.parse(metadata.dataset.settings);
   if (!settings.scrollPreviewWithEditor) return;
-  let source = settings.source, line, timer, mapped;
+  let source = settings.source, line, timer, mapped, followingUntil = 0;
+  // Native preview scrolling normally reveals the editor's corresponding line.
+  // Our own caret-follow scroll must not feed back and move the source viewport.
+  window.addEventListener('scroll', event => {
+    if (performance.now() < followingUntil) event.stopImmediatePropagation();
+  }, true);
+  for (const type of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
+    window.addEventListener(type, () => { followingUntil = 0; }, { capture: true, passive: true });
+  }
   const schedule = () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
@@ -19,17 +27,22 @@ function followEditedLine() {
         element = candidate;
       }
       if (!element) return;
-      const rect = element.getBoundingClientRect();
+      const block = element.tagName === 'CODE' && element.parentElement?.tagName === 'PRE' ? element.parentElement : element;
+      const rect = block.getBoundingClientRect();
       // A code block can fill several screens. Follow the selected source line
       // within it instead of trying to fit the whole block into the viewport.
-      const ratio = next ? Math.min(1, (line - Number(element.dataset.line)) /
-        Math.max(1, Number(next.dataset.line) - Number(element.dataset.line))) : 0;
+      const lines = element.tagName === 'CODE' ? element.textContent.split('\n').length
+        : next ? Number(next.dataset.line) - Number(element.dataset.line) : 1;
+      const ratio = Math.min(1, (line - Number(element.dataset.line)) / Math.max(1, lines));
       const top = rect.height > innerHeight ? rect.top + ratio * rect.height : rect.top;
       const bottom = rect.height > innerHeight ? top + 24 : rect.bottom;
-      if (top >= 0 && bottom <= innerHeight) return;
-      // Let the native handler map the source line to pixels and suppress its
-      // scroll feedback to the editor. Never focus the preview to reveal a line.
-      window.postMessage({ type: 'updateView', line, source }, location.origin);
+      // Reveal only the missing portion. Aligning the entire paragraph to the
+      // top on each content update makes typing repeatedly jump across a page.
+      const margin = 8;
+      const offset = top < margin ? top - margin : bottom > innerHeight - margin ? bottom - innerHeight + margin : 0;
+      if (Math.abs(offset) < 1) return;
+      followingUntil = performance.now() + 150;
+      window.scrollBy({ top: offset, behavior: 'instant' });
     }, 100);
   };
   window.addEventListener('message', event => {
