@@ -1,7 +1,7 @@
 {
   "name": "singularity",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A quiet desktop text editor with optional coding tools",
   "productName": "Singularity",
   "main": "electron/main.cjs",

@@ -1,10 +1,8 @@
-## Singularity 0.1.2
+## Singularity 0.1.3
 
-- Open tabs and their initial data finish restoring before the workspace appears. Closed tools stay closed, and an empty session opens Welcome.
-- The loading screen uses your last theme and font, avoiding the brief theme change during startup.
-- Your selected font applies consistently to app text, terminals, and extension UI. Tab close icons retain their correct appearance.
-- Git repositories can be initialized and used locally without GitHub or a remote. Git data and the selected section restore correctly after restarting.
-- Improved spacing around controls and code. Open Editors, Timeline, and other sidebar sections no longer overlap or clip at the bottom of the window.
-- Linux installers now include standard icon sizes so the application icon appears correctly in desktop menus.
+- Export rendered Markdown previews, text, and code to PDF from the tab toolbar, including unsaved edits. In Markdown previews, the button sits beside **Show Source**.
+- Standard PDFs use a consistent light palette regardless of the app theme. Right-click **Export PDF** and choose **Export Dark PDF** for a fixed dark palette, saved as `filename-dark.pdf`.
+- PDFs save to the project folder. Without an open project, choose a folder when prompted. Replacing an existing PDF requires confirmation. Text and code exports support files up to 20 MB.
+- Fixed split Markdown previews jumping while typing, especially when adding lines at the end of a file or editing wrapped paragraphs. The preview follows the caret without taking keyboard focus, and manual scrolling, undo, document switching, and preview position restoration remain supported.
 
 See [installation and updates](https://github.com/mertdemirtas/Singularity/blob/main/docs/releases.md) for downloads and update instructions.
