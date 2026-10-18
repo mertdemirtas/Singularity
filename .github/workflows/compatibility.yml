@@ -191,10 +191,17 @@ jobs:
               markdownSource.editor.getControl().setValue(Array.from({ length: 120 }, (_, index) => '# Heading ' + index).join('\n') + '\n');
               await nativeCommands.executeCommand('markdown.showPreviewToSide', markdownSource.editor.uri.codeUri);
             });
+            await page.waitForFunction(() => [...nativeShell.mainPanel.widgets()].some(widget => widget.viewType === 'markdown.preview' && widget.isVisible));
+            const previewId = await page.evaluate(() => [...nativeShell.mainPanel.widgets()].find(widget => widget.viewType === 'markdown.preview' && widget.isVisible).identifier.id);
             let markdownFrame;
             const previewDeadline = Date.now() + 20000;
             while (!markdownFrame) {
-              for (const frame of page.frames()) if (await frame.evaluate(() => !!document.getElementById('vscode-markdown-preview-data')).catch(() => false)) { markdownFrame = frame; break; }
+              for (const frame of page.frames()) {
+                try {
+                  if (new URL(frame.parentFrame()?.url() || 'about:blank').searchParams.get('id') !== previewId) continue;
+                  if (await frame.evaluate(() => !!document.getElementById('vscode-markdown-preview-data') && document.querySelectorAll('h1').length === 120)) { markdownFrame = frame; break; }
+                } catch { /* A new preview replaces its initial iframe while loading. */ }
+              }
               if (Date.now() > previewDeadline) throw new Error('Markdown split preview did not load.');
               if (!markdownFrame) await delay(100);
             }
