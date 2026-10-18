@@ -8,7 +8,7 @@ function installDeb({ filename, version, run = execFileSync, root = process.getu
   // successful apt repair is not evidence that our update was installed.
   run(root ? '/usr/bin/dpkg' : '/usr/bin/pkexec', root ? ['-i', filename] : ['/usr/bin/dpkg', '-i', filename],
     { timeout: 180000, stdio: 'pipe' });
-  const installed = run('/usr/bin/dpkg-query', ['-W', '-f=${Version}', 'singularity'], { encoding: 'utf8' }).trim();
+  const installed = run('/usr/bin/dpkg-query', ['-W', '-f=${Version}', 'singularity-editor'], { encoding: 'utf8' }).trim();
   if (installed !== version) throw new Error(`Installed version ${installed} does not match ${version}`);
 }
 module.exports = { installDeb };

@@ -91,7 +91,7 @@
     "electron": "^43.7.11",
     "electron-builder": "26.15.3"
   },
-  "desktopName": "singularity.desktop",
+  "desktopName": "singularity-editor.desktop",
   "allowScripts": {
     "@parcel/watcher": true,
     "@theia/ffmpeg": true,

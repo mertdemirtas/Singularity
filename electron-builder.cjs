@@ -35,9 +35,12 @@ module.exports = {
       SUVerifyUpdateBeforeExtraction: true
     }
   },
-  linux: { target: ['deb'], executableName: 'singularity', category: 'Development', icon: '.release-runtime/icons',
+  linux: { target: ['deb'], executableName: 'singularity-editor', category: 'Development', icon: '.release-runtime/icons',
     desktop: { entry: { StartupWMClass: 'Singularity', Keywords: 'text;editor;code;' } } },
-  deb: { afterInstall: '.release-runtime/after-install.sh',
+  // Ubuntu already ships an unrelated game named singularity. Keep every Linux
+  // package/launcher/icon identifier distinct so system upgrades cannot replace us.
+  deb: { packageName: 'singularity-editor', afterInstall: '.release-runtime/after-install.sh',
+    fpm: ['--conflicts', 'singularity (<= 0.1.3)', '--replaces', 'singularity (<= 0.1.3)'],
     depends: ['libgtk-3-0', 'libnotify4', 'libnss3', 'libxss1', 'libxtst6', 'xdg-utils',
       'libatspi2.0-0', 'libuuid1', 'libsecret-1-0', 'pkexec'] }
 };

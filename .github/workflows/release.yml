@@ -104,8 +104,14 @@ jobs:
           (async () => {
             // Install the actual distributable in a path containing spaces.
             if (process.platform === 'linux') {
+              // Reproduce the package-name collision seen on Ubuntu: the game
+              // must coexist and must never replace the editor during upgrades.
+              run('sudo', ['apt-get', 'install', '-y', 'singularity']);
               run('sudo', ['apt-get', 'install', '-y', path.join(release, files.find(file => file.endsWith('.deb')))]);
-              executable = '/opt/Singularity/singularity'; resources = '/opt/Singularity/resources';
+              executable = '/opt/Singularity/singularity-editor'; resources = '/opt/Singularity/resources';
+              assert.equal(execFileSync('dpkg-query', ['-W', '-f=${Package}', 'singularity-editor'], { encoding: 'utf8' }), 'singularity-editor');
+              assert(fs.existsSync('/usr/share/applications/singularity-editor.desktop'));
+              assert(fs.existsSync('/usr/games/singularity'), 'The unrelated game must remain installed');
               const sandbox = fs.statSync('/opt/Singularity/chrome-sandbox');
               assert.equal(sandbox.uid, 0); assert.equal(sandbox.mode & 0o7777, 0o4755);
               // Verify desktop discovery, not just that an image was packaged.
@@ -116,7 +122,7 @@ jobs:
           theme = Gtk.IconTheme.new()
           theme.set_custom_theme('hicolor')
           for size in (16, 48, 256, 512):
-              icon = theme.lookup_icon('singularity', size, 0)
+              icon = theme.lookup_icon('singularity-editor', size, 0)
               assert icon is not None, 'Missing desktop icon at size ' + str(size)
               print('Desktop icon:', size, icon.get_filename())
           `]);

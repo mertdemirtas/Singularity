@@ -22,7 +22,7 @@ const execFileAsync = promisify(execFile);
 
 const root = path.resolve(__dirname, '..');
 app.setName('Singularity');
-if (process.platform === 'linux') app.setDesktopName('singularity.desktop');
+if (process.platform === 'linux') app.setDesktopName('singularity-editor.desktop');
 if (process.platform === 'win32') app.setAppUserModelId('com.mertdemirtas.singularity');
 // Keep existing sessions and browser data available after the product rename.
 if (!app.commandLine.hasSwitch('user-data-dir')) {

@@ -24,6 +24,8 @@ You only need the installer. The `.zip`, `.blockmap`, and update metadata files 
 
 3. Open **Singularity** from your applications menu.
 
+The editor's Linux package is named `singularity-editor`. Ubuntu's `singularity` package is an unrelated game; do not use `apt install singularity` to install the editor. If a system upgrade replaced an older editor with that game, reinstall using the downloaded `.deb`. Your editor settings and files are kept.
+
 ## Windows
 
 1. Download and open the `.exe` installer.

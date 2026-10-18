@@ -8,7 +8,7 @@ if (process.platform !== 'linux') throw new Error('The desktop launcher is for L
 const root = path.resolve(__dirname, '..');
 const quote = value => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/`/g, '\\`').replace(/\$/g, '\\$').replace(/%/g, '%%')}"`;
 const directory = path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local/share'), 'applications');
-const target = path.join(directory, 'singularity.desktop');
+const target = path.join(directory, 'singularity-editor.desktop');
 const desktop = `[Desktop Entry]
 Type=Application
 Name=Singularity
