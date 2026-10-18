@@ -20,7 +20,8 @@ function pdfName(name) {
 }
 
 // Executed only inside the selected Markdown preview's content frame. Its live
-// DOM retains extension rendering, local resources, syntax colors, and SVGs.
+// DOM retains extension rendering, local resources, and SVGs. Print colors are
+// independent of the editor theme; the on-screen preview is left unchanged.
 async function prepareMarkdownPrint() {
   const data = document.getElementById('vscode-markdown-preview-data');
   if (!data) throw new Error('The Markdown preview is not ready. Try exporting again.');
@@ -31,7 +32,36 @@ async function prepareMarkdownPrint() {
   const nonce = /'nonce-([^']+)'/.exec(policy)?.[1];
   if (nonce) style.nonce = nonce;
   style.textContent = `@media print {
+    html, body {
+      color-scheme:light!important; color:#24292f!important; background:#fff!important;
+      --vscode-editor-background:#fff!important; --vscode-editor-foreground:#24292f!important;
+      --vscode-textLink-foreground:#0969da!important; --vscode-textLink-activeForeground:#0969da!important;
+      --vscode-textPreformat-foreground:#24292f!important; --vscode-textPreformat-background:#f6f8fa!important;
+      --vscode-textCodeBlock-background:#f6f8fa!important; --vscode-widget-border:#d0d7de!important;
+      --vscode-textBlockQuote-background:#f6f8fa!important; --vscode-textBlockQuote-border:#d0d7de!important;
+    }
     html, body { height:auto!important; min-height:0!important; overflow:visible!important; padding:0!important; }
+    .markdown-body { color:#24292f!important; background:#fff!important; }
+    h1,h2,h3,h4,h5,h6,hr,th,td,blockquote,pre { border-color:#d0d7de!important; }
+    a, a:hover { color:#0969da!important; }
+    blockquote { color:#57606a!important; background:#f6f8fa!important; }
+    th { color:#24292f!important; background:#f6f8fa!important; }
+    td { color:#24292f!important; background:#fff!important; }
+    pre, code { color:#24292f!important; background:#f6f8fa!important; }
+    pre code { background:transparent!important; }
+    pre code [class*="hljs-"] { color:inherit!important; background:transparent!important; }
+    pre code .hljs-keyword, pre code .hljs-name, pre code .hljs-tag,
+    pre code .hljs-selector-tag, pre code .hljs-literal { color:#cf222e!important; }
+    pre code .hljs-string, pre code .hljs-meta-string, pre code .hljs-regexp,
+    pre code .hljs-template-tag, pre code .hljs-template-variable { color:#0a3069!important; }
+    pre code .hljs-comment, pre code .hljs-quote, pre code .hljs-doctag { color:#57606a!important; }
+    pre code .hljs-number, pre code .hljs-built_in, pre code .hljs-builtin-name,
+    pre code .hljs-type, pre code .hljs-attr, pre code .hljs-attribute,
+    pre code .hljs-variable, pre code .hljs-symbol, pre code .hljs-bullet,
+    pre code .hljs-link, pre code .hljs-meta, pre code .hljs-meta-keyword { color:#0550ae!important; }
+    pre code .hljs-title, pre code .hljs-section { color:#8250df!important; }
+    pre code .hljs-addition { color:#116329!important; background:#dafbe1!important; }
+    pre code .hljs-deletion { color:#82071e!important; background:#ffebe9!important; }
     body.scrollBeyondLastLine { margin-bottom:0!important; }
     #code-csp-warning, .code-line::before { display:none!important; }
     h1,h2,h3,h4,h5,h6 { break-after:avoid-page; }
@@ -147,7 +177,7 @@ function createPdfExporter({ getWindow, dialog, BrowserWindow }) {
       else {
         temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'singularity-pdf-'));
         const family = normalizeAppearance({ background: '#fff', foreground: '#222', fontFamily: request.fontFamily }).fontFamily;
-        const html = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><title>${escapeHtml(name || 'Document')}</title><style>html{color:#222;background:white}body{margin:0;font:11pt/1.45 ${family}}h1{font:600 16pt/1.4 sans-serif;overflow-wrap:anywhere;break-after:avoid-page}pre{white-space:pre-wrap;overflow-wrap:anywhere;tab-size:4}</style></head><body><h1>${escapeHtml(name || 'Document')}</h1><pre>${escapeHtml(request.text)}</pre></body></html>`;
+        const html = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><title>${escapeHtml(name || 'Document')}</title><style>html{color-scheme:light;color:#222;background:white}body{margin:0;font:11pt/1.45 ${family}}h1{font:600 16pt/1.4 sans-serif;overflow-wrap:anywhere;break-after:avoid-page}pre{white-space:pre-wrap;overflow-wrap:anywhere;tab-size:4}</style></head><body><h1>${escapeHtml(name || 'Document')}</h1><pre>${escapeHtml(request.text)}</pre></body></html>`;
         const filename = path.join(temporary, 'document.html'); await fs.writeFile(filename, html);
         printWindow = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, javascript: false } });
         printWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
