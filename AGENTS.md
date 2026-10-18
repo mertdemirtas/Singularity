@@ -26,5 +26,8 @@
 
 ## Delivery
 - Complete the requested implementation, not just a draft.
+- Keep commits focused on one feature, bug fix, or improvement.
+- When a release is requested, choose the next unused patch version. Do not increase the minor or major version unless the user explicitly requests it.
+- Publish a new version only when the user requests a release.
 - Summarize what changed.
 - Mention tests executed and remaining limitations.
