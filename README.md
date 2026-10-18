@@ -25,6 +25,8 @@ A simple desktop text editor for notes and code, available on Linux, Windows, an
 
 Auto-save is enabled when you switch away from the app. Use **Save As** to name a new file or keep a **Recovered** document.
 
+Use **Export PDF** in the tab toolbar to export Markdown, text, or code. In Markdown previews it sits beside **Show Source** and exports the rendered document. Exports include unsaved edits and go to the project folder; without a project, choose a folder when prompted. Existing PDFs require confirmation before replacement. Text and code exports support files up to 20 MB.
+
 On startup, Singularity restores your open tabs before showing the workspace. Closed tools stay closed; an empty session shows Welcome. Your last theme and font are used for the loading screen, and the selected font also applies to the terminal and extension UI.
 
 Drag sidebar icons to reorder them. Right-click an icon to hide it, or right-click empty sidebar space to restore icons and reset the layout.

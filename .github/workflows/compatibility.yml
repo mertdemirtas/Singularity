@@ -172,6 +172,18 @@ jobs:
               const text = Array.from({ length: buffer.length }, (_, index) => buffer.getLine(index)?.translateToString()).join('\n');
               return text.includes('SINGULARITY_PYTHON_OK');
             }, { timeout: 60000, polling: 100 });
+            // Exercise both Chromium printing paths on each native platform.
+            // Explicit widgets keep terminal focus from changing the source.
+            await page.evaluate(() => nativeCommands.executeCommand('plain-editor.export-pdf', nativeShell.mainPanel.currentTitle.owner));
+            const sourcePdf = path.join(project, "smoke & quote's file.pdf");
+            assert.equal(fs.readFileSync(sourcePdf).subarray(0, 5).toString(), '%PDF-');
+            const markdown = path.join(project, 'preview.md');
+            fs.writeFileSync(markdown, '# Native PDF export\n\n**Rendered Markdown**, a link, and a table.\n\n[Link](https://example.com)\n\n| One | Two |\n| --- | --- |\n| A | B |\n');
+            await page.evaluate(uri => nativeCommands.executeCommand('vscode.open', uri), pathToFileURL(markdown).href);
+            await page.waitForFunction(() => nativeShell.mainPanel.currentTitle?.owner.title.label === 'preview.md');
+            await page.evaluate(() => nativeCommands.executeCommand('plain-editor.export-pdf', nativeShell.mainPanel.currentTitle.owner));
+            assert.equal(fs.readFileSync(path.join(project, 'preview.pdf')).subarray(0, 5).toString(), '%PDF-');
+            console.log('Native source and rendered Markdown PDF exports passed.');
             await page.screenshot({ path: path.join(artifact, 'desktop.png') });
             await page.click('[data-plain-action="window-close"]');
             console.log(`Native ${process.platform}/${process.arch}: fonts, file path with spaces, save shortcut, and Python terminal passed.`);

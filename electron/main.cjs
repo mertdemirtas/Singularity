@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, shell, dialog } = require('electron');
 const { spawn, execFile, execFileSync } = require('node:child_process');
 const fs = require('node:fs/promises');
 const { existsSync } = require('node:fs');
@@ -16,6 +16,7 @@ const { backendRuntime } = require('./runtime.cjs');
 const { Updates } = require('./updates.cjs');
 const { allocatePort, waitForBackend } = require('./backend-start.cjs');
 const { normalizeAppearance } = require('../extensions/plain-editor-ui/appearance-cache.cjs');
+const { createPdfExporter } = require('./pdf-export.cjs');
 
 const execFileAsync = promisify(execFile);
 
@@ -235,6 +236,7 @@ async function start() {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
+  ipcMain.handle('plain-editor:export-pdf', createPdfExporter({ getWindow: () => mainWindow, dialog, BrowserWindow }));
   ipcMain.handle('plain-editor:updates', (event, action) => {
     if (event.sender !== mainWindow?.webContents) throw new Error('Update access denied.');
     if (action === 'check') return updates?.check();
