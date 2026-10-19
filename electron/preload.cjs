@@ -10,6 +10,11 @@ try {
 contextBridge.exposeInMainWorld('plainEditorDesktop', {
   platform: process.platform,
   startupAppearance,
+  onResume(callback) {
+    const listener = () => callback();
+    ipcRenderer.on('plain-editor:resume', listener);
+    return () => ipcRenderer.removeListener('plain-editor:resume', listener);
+  },
   exportPdf(request) { return ipcRenderer.invoke('plain-editor:export-pdf', request); },
   updates(action) { return ipcRenderer.invoke('plain-editor:updates', action); },
   onUpdateState(callback) {

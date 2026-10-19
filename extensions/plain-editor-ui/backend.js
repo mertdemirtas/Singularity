@@ -8,6 +8,10 @@ const { PluginScanner } = require('@theia/plugin-ext/lib/common/plugin-protocol'
 module.exports = new ContainerModule(bind => {
   bind(BackendApplicationContribution).toDynamicValue(({ container }) => ({
     initialize() {
+      if (process.env.SINGULARITY_DESKTOP === '1') {
+        const { WebsocketFrontendConnectionService } = require('@theia/core/lib/node/messaging/websocket-frontend-connection-service');
+        require('./desktop-connections.cjs').retainDesktopConnections(container.get(WebsocketFrontendConnectionService));
+      }
       container.get(EarlyExpressMiddleware).handlers.push((request, response, next) => {
         // Theia's gzip lookup treats a cache-busting query as part of the
         // filename. Preserve the browser's hashed URL while fixing that lookup.

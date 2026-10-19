@@ -186,6 +186,7 @@ function buildSettings() {
 }
 
 module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
+  require('./save-participants');
   require('./large-files')(rebind);
   require('./view-interaction')(rebind);
   require('./editor-lifecycle')(rebind);
@@ -717,6 +718,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       },
       onDidInitializeLayout: async app => {
         shell = app.shell;
+        require('./input-recovery')(shell);
         await preferences.ready;
         syncFont();
         require('./editor-scroll')(editorManager);

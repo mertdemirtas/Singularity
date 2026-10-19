@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, Menu, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, shell, dialog, powerMonitor } = require('electron');
 const { spawn, execFile, execFileSync } = require('node:child_process');
 const fs = require('node:fs/promises');
 const { existsSync } = require('node:fs');
@@ -152,10 +152,13 @@ async function start() {
   // module ABI. The launcher supplies the exact Node executable used by npm.
   const { node, env } = backendRuntime({ packaged: app.isPackaged, resourcesPath: process.resourcesPath });
   env.NODE_COMPILE_CACHE ||= path.join(app.getPath('userData'), 'Cache', 'node');
+  env.SINGULARITY_DESKTOP = '1';
+  env.FRONTEND_CONNECTION_TIMEOUT = '-1';
 
-  backend = spawn(node, [backendEntry, `--port=${port}`, '--hostname=127.0.0.1', '--plugins=local-dir:./plugins'], {
+  backend = spawn(node, [path.join(__dirname, 'backend-process.cjs'), backendEntry, `--port=${port}`, '--hostname=127.0.0.1', '--plugins=local-dir:./plugins'], {
     cwd: root,
     env,
+    detached: process.platform !== 'win32',
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     windowsHide: true
   });
@@ -204,6 +207,14 @@ async function start() {
     }
   });
   mainWindow.on('closed', () => { mainWindow = undefined; });
+  mainWindow.webContents.on('render-process-gone', () => { frontendReady = false; closePending = false; });
+  const resume = () => mainWindow?.webContents.send('plain-editor:resume');
+  powerMonitor.on('resume', resume);
+  powerMonitor.on('unlock-screen', resume);
+  mainWindow.once('closed', () => {
+    powerMonitor.removeListener('resume', resume);
+    powerMonitor.removeListener('unlock-screen', resume);
+  });
   mainWindow.webContents.on('will-prevent-unload', event => {
     // Approved closes have already reviewed documents or durably checkpointed
     // them for an update. The browser's second guard must not trap the restart.
