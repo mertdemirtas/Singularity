@@ -5,6 +5,38 @@ const { EventEmitter } = require('node:events');
 const { watchParent } = require('../../electron/backend-process.cjs');
 const { retainDesktopConnections } = require('../../extensions/plain-editor-ui/desktop-connections.cjs');
 const { waitForBackend } = require('../../electron/backend-start.cjs');
+const { WebsocketFrontendConnectionService } = require('@theia/core/lib/node/messaging/websocket-frontend-connection-service');
+
+function sockets() {
+  const service = new WebsocketFrontendConnectionService();
+  service.logger = { info() {} };
+  service.frontendConnectionTimeout = () => -1;
+  service.createConnection = () => {};
+  const old = new EventEmitter(), current = new EventEmitter(), closed = [];
+  const channel = { socket: old, disconnect() { this.socket = undefined; } };
+  service.closeConnection = id => closed.push(id);
+  retainDesktopConnections(service);
+  return { service, old, current, channel, closed };
+}
+test('a late disconnect from the pre-sleep socket cannot detach its replacement transport', () => {
+  const { service, old, current, channel } = sockets();
+  service.handleSocketDisconnect(old, channel, 'editor');
+  channel.socket = current;
+  service.handleSocketDisconnect(current, channel, 'editor');
+  old.emit('disconnect', 'old heartbeat expired');
+  assert.equal(channel.socket, current);
+  current.emit('disconnect', 'sleep again');
+  assert.equal(channel.socket, undefined);
+});
+test('sleep retains a desktop session while an explicitly closed renderer can release it', () => {
+  const { service, old, current, channel, closed } = sockets();
+  service.handleSocketDisconnect(old, channel, 'editor'); old.emit('disconnect');
+  assert.deepEqual(closed, []);
+  channel.socket = current; service.channelsMarkedForClose.add('editor');
+  service.handleSocketDisconnect(current, channel, 'editor'); current.emit('disconnect');
+  assert.deepEqual(closed, ['editor']);
+  assert.equal(current.listenerCount('disconnect'), 0);
+});
 
 test('new renderers release disconnected sessions but preserve live secondary frontends', () => {
   const closed = [];

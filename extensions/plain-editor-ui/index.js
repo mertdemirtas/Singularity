@@ -760,8 +760,9 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
               approved = false;
               console.error('Singularity could not review the close request', error);
               messages.error('Could not save the editor session. Please try closing again.');
+            } finally {
+              window.plainEditorDesktop.closeReviewed(approved);
             }
-            window.plainEditorDesktop.closeReviewed(approved);
           });
         }
         // The document tabs become the title bar; the action rail reserves space
