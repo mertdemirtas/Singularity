@@ -208,6 +208,7 @@ async function start() {
   });
   mainWindow.on('closed', () => { mainWindow = undefined; });
   mainWindow.webContents.on('render-process-gone', () => { frontendReady = false; closePending = false; });
+  mainWindow.webContents.on('did-navigate', () => { frontendReady = false; closePending = false; closeApproved = false; });
   const resume = () => mainWindow?.webContents.send('plain-editor:resume');
   powerMonitor.on('resume', resume);
   powerMonitor.on('unlock-screen', resume);

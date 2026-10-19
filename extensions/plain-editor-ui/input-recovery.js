@@ -9,7 +9,7 @@ module.exports = function recoverInput(shell) {
     // Lumino's dock/split handles have no public release method. They retain
     // document capture listeners until pointerup, which sleep/blur can lose.
     for (const panel of [...panels, ...shell.layout.widgets]) {
-      if (panel._pressData) panel._releaseMouse();
+      if (panel._pressData && typeof panel._releaseMouse === 'function') panel._releaseMouse();
     }
   };
   const hidden = () => { if (document.hidden) reset(); };

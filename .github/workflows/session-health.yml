@@ -1,0 +1,50 @@
+name: Desktop session stability
+on:
+  push:
+    branches: [development]
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: Sustained session test duration (5–120 minutes)
+        type: number
+        default: 10
+permissions:
+  contents: read
+concurrency:
+  group: session-health-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  session:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 145
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.21.0
+          cache: npm
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libsecret-1-dev libx11-dev libxkbfile-dev libkrb5-dev xvfb
+          npm run setup
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+      - name: Backend and session unit tests
+        run: npm test
+      - name: Sleep/reconnection, stalled saves, tab input and close regressions
+        run: |
+          for scenario in reconnect savehook drag; do
+            SESSION_CASE="$scenario" xvfb-run -a npm run test:session || exit 1
+          done
+      - name: Sustained project editing and memory check
+        env:
+          MINUTES: ${{ inputs.minutes || 10 }}
+        run: |
+          node -e 'const n=Number(process.env.MINUTES); if(!Number.isInteger(n)||n<5||n>120)process.exit(1)'
+          SESSION_CASE=soak SESSION_SOAK_MS=$((MINUTES * 60000)) xvfb-run -a npm run test:session
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: session-stability-${{ github.sha }}
+          path: /tmp/singularity-session-health-*/
+          if-no-files-found: ignore

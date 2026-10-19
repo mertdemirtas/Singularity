@@ -47,6 +47,8 @@ Keep Electron sandboxing enabled.
 | `npm run build` | Rebuild for development |
 | `npm run build:release` | Create an optimized build |
 | `npm run check` | Check Theia dependency versions |
+| `npm test` | Run backend and session unit tests |
+| `npm run test:session` | Test desktop reconnection, saving, and closing |
 | `npm run package:release` | Build the current system's installer into `release/` |
 | `npm run package:dir` | Build an unpacked app for debugging |
 

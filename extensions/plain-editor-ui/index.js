@@ -751,12 +751,11 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           window.plainEditorDesktop.onCloseRequested(async () => {
             let approved = false;
             try {
-              approved = await windowService.isSafeToShutDown(StopReason.Close);
-              if (approved) {
-                await recovery?.flush({ closing: true });
-                layoutRestorer.storeLayout(app);
-                await window.plainEditorDesktop.flushState();
-              }
+              approved = await require('./close-review.cjs').reviewClose({
+                windowService, stopReason: StopReason.Close, recovery,
+                storeLayout: () => layoutRestorer.storeLayout(app),
+                flushState: () => window.plainEditorDesktop.flushState()
+              });
             } catch (error) {
               approved = false;
               console.error('Singularity could not review the close request', error);

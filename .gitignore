@@ -9,6 +9,8 @@ esbuild.mjs
 *.log
 *.tsbuildinfo
 plugins/vscode.*/
-tests/
+tests/*
+!tests/backend/
+!tests/session/
 .release-runtime/
 release/

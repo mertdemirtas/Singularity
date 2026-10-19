@@ -51,7 +51,9 @@ jobs:
         run: |
           npm run check
           node -e "require('node-pty'); require('keytar'); require('@parcel/watcher'); require('drivelist'); console.log('Native modules loaded on', process.platform, process.arch)"
-      - name: Check document recovery storage
+      - name: Backend and session unit tests
+        run: npm test
+      - name: Check recovery persistence on this platform
         run: |
           node <<'JS'
           const assert = require('node:assert/strict');

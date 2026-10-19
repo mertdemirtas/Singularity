@@ -13,6 +13,7 @@ class StateStore {
       .then(text => Object.assign(Object.create(null), JSON.parse(text)))
       .catch(error => {
         if (error.code === 'ENOENT') return Object.create(null);
+        this.loaded = undefined;
         throw error;
       });
     return this.loaded;
