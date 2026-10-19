@@ -33,7 +33,7 @@ jobs:
         run: npm test
       - name: Sleep/reconnection, stalled saves, tab input and close regressions
         run: |
-          for scenario in reconnect savehook drag; do
+          for scenario in reconnect savehook drag lifecycle; do
             SESSION_CASE="$scenario" xvfb-run -a npm run test:session || exit 1
           done
       - name: Sustained project editing and memory check
@@ -46,5 +46,8 @@ jobs:
         if: always()
         with:
           name: session-stability-${{ github.sha }}
-          path: /tmp/singularity-session-health-*/
+          path: |
+            /tmp/singularity-session-health-*/memory.json
+            /tmp/singularity-session-health-*/desktop.log
+            /tmp/singularity-session-health-*/renderer.heapsnapshot
           if-no-files-found: ignore

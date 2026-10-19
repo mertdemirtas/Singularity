@@ -103,6 +103,16 @@ async function until(check, label, timeout = 12e3) {
     console.log("Lost pointer release after blur:", index);
     await page.click(".lm-TabBar.theia-app-main .lm-TabBar-tab:last-child .lm-TabBar-tabLabel");
     assert(await page.evaluate(() => healthShell.mainPanel.currentTitle.owner === healthWidget), "First click after wake must switch tabs");
+  } else if (mode === "lifecycle") {
+    for (let cycle = 0; cycle < 30; cycle++) {
+      assert(await page.evaluate(async file => {
+        await healthCommands.executeCommand('vscode.open', file);
+        const widget = healthShell.mainPanel.currentTitle.owner;
+        const scope = widget.editor.getControl()._contextKeyService._parent;
+        await healthShell.closeWidget(widget.id, { save: false });
+        return scope._isDisposed;
+      }, require('node:url').pathToFileURL(files[0]).href), 'Closed editor must dispose its parent keybinding context');
+    }
   } else if (mode === "soak") {
     const length = Number(process.env.SESSION_SOAK_MS || 6e5), metrics = [], client = await page.createCDPSession();
     await client.send("Performance.enable");
@@ -129,7 +139,11 @@ async function until(check, label, timeout = 12e3) {
       await page.evaluate(async (file2) => {
         await healthCommands.executeCommand("vscode.open", file2);
         const widget = healthShell.mainPanel.currentTitle.owner;
-        if (widget !== healthWidget) await healthShell.closeWidget(widget.id, { save: false });
+        if (widget !== healthWidget) {
+          const scope = widget.editor.getControl()._contextKeyService._parent;
+          await healthShell.closeWidget(widget.id, { save: false });
+          if (!scope._isDisposed) throw Error('Closed editor retained its keybinding context');
+        }
         await healthShell.activateWidget(healthWidget.id);
       }, pathToFileURL(file).href);
       if (cycle % 10 === 0) {
@@ -153,6 +167,12 @@ async function until(check, label, timeout = 12e3) {
       }
       cycle++;
       await pause(250);
+    }
+    if (process.env.SESSION_HEAP_SNAPSHOT) {
+      const fd = fs.openSync(path.join(temp, 'renderer.heapsnapshot'), 'w');
+      client.on('HeapProfiler.addHeapSnapshotChunk', ({chunk}) => fs.writeSync(fd, chunk));
+      await client.send('HeapProfiler.takeHeapSnapshot');
+      fs.closeSync(fd);
     }
     // Theia deliberately caches closed text models for three minutes. Compare
     // steady-state samples after that cache has warmed up, not startup vs cache.

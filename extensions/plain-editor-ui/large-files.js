@@ -8,6 +8,7 @@ const { hasOpenReadWriteCloseCapability } = require('@theia/filesystem/lib/commo
 const { EditorModelService } = require('@theia/plugin-ext/lib/main/browser/text-editor-model-service');
 const { EditorsAndDocumentsMain } = require('@theia/plugin-ext/lib/main/browser/editors-and-documents-main');
 const { MonacoEditorProvider } = require('@theia/monaco/lib/browser/monaco-editor-provider');
+const { LifecycleEditorProvider } = require('./editor-provider-lifecycle');
 
 const CHUNK_SIZE = 4 * 1024 * 1024;
 const isLarge = model => Boolean(model?.isTooLargeForTokenization?.() || model?.isTooLargeForSyncing?.());
@@ -47,7 +48,7 @@ class BoundedEditorModelService extends EditorModelService {
 }
 decorate(injectable(), BoundedEditorModelService);
 
-class LargeFileEditorProvider extends MonacoEditorProvider {
+class LargeFileEditorProvider extends LifecycleEditorProvider {
   async createMonacoEditor(uri, override, toDispose) {
     const editor = await super.createMonacoEditor(uri, override, toDispose);
     if (isLarge(editor.document.textEditorModel)) editor.setShouldDisplayDirtyDiff(false);
