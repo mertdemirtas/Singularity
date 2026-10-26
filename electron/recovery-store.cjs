@@ -8,7 +8,7 @@ const validId = id => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-
 function validate(entry) {
   if (!entry || !validId(entry.id) || typeof entry.text !== 'string'
     || typeof entry.uri !== 'string' || entry.uri.length > 32768
-    || !/^(file|untitled):/.test(entry.uri)
+    || !/^(file|untitled|ssh):/.test(entry.uri)
     || typeof entry.languageId !== 'string' || entry.languageId.length > 160
     || (entry.encoding !== undefined && (typeof entry.encoding !== 'string' || entry.encoding.length > 160))) {
     throw new Error('Invalid recovery document.');

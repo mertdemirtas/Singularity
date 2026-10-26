@@ -6,7 +6,6 @@ const { CommandContribution } = require('@theia/core/lib/common/command');
 const { PreferenceContribution } = require('@theia/core/lib/common/preferences/preference-schema');
 const { PreferenceService } = require('@theia/core/lib/common/preferences/preference-service');
 const { MessageService } = require('@theia/core/lib/common/message-service');
-const { isWindows } = require('@theia/core/lib/common/os');
 const { WorkspaceService } = require('@theia/workspace/lib/browser/workspace-service');
 const { WorkspaceTrustService } = require('@theia/workspace/lib/browser/workspace-trust-service');
 const { TerminalService } = require('@theia/terminal/lib/browser/base/terminal-service');
@@ -32,12 +31,8 @@ class DevelopmentWidget extends BaseWidget {
         <div class="plain-tool-actions"><button data-tool-action="codex">Start Codex</button><button data-tool-action="claude">Start Claude Code</button></div>
         <small>CLI commands can be customized in All settings: plainEditor.ai.codexCommand and plainEditor.ai.claudeCommand.</small>
       </section>
-      <section><h2>Remote server</h2><label>SSH host<input data-tool-field="host" placeholder="user@example.com" spellcheck="false"></label>
-        <div class="plain-tool-ports"><label>SSH port<input data-tool-field="port" type="number" min="1" max="65535" value="22"></label>
-          <label>Forward local port<input data-tool-field="localPort" type="number" min="1" max="65535" placeholder="Optional"></label>
-          <label>Remote port<input data-tool-field="remotePort" type="number" min="1" max="65535" placeholder="Optional"></label></div>
-        <button data-tool-action="ssh">Connect in terminal</button><small>Forwarded web apps can be opened at localhost in the browser. SSH uses your existing keys and configuration.</small>
-      </section><div class="plain-tool-status" role="status"></div></div>`;
+      <section><h2>Remote SSH</h2><p>Open a terminal and type <code>ssh user@host</code>. Sign in there; the device’s files appear automatically in Files.</p>
+        <button data-tool-action="ssh-terminal">Open terminal</button></section><div class="plain-tool-status" role="status"></div></div>`;
     this.status = this.node.querySelector('.plain-tool-status');
     this.node.addEventListener('click', async event => {
       const button = event.target.closest('[data-tool-action]');
@@ -53,21 +48,7 @@ class DevelopmentWidget extends BaseWidget {
             if (!value('server')) throw new Error('Enter a server command.');
             await controller.launch('Development server', value('server')); break;
           case 'codex': case 'claude': await controller.launchAI(button.dataset.toolAction); break;
-          case 'ssh': {
-            if (!/^[\w.@:[\]-]+$/.test(value('host')) || value('host').startsWith('-')) throw new Error('Enter an SSH host, such as user@example.com.');
-            const port = field => {
-              const number = Number(value(field));
-              if (!Number.isInteger(number) || number < 1 || number > 65535) throw new Error('Ports must be between 1 and 65535.');
-              return number;
-            };
-            let forwarding = '';
-            if (value('localPort') || value('remotePort')) forwarding = ` -L 127.0.0.1:${port('localPort')}:127.0.0.1:${port('remotePort')}`;
-            // cmd.exe passes POSIX quotes literally; the Windows host has
-            // already been restricted to characters safe in a bare argument.
-            const host = isWindows ? value('host') : shellQuote(value('host'));
-            await controller.launch(`SSH: ${value('host')}`, `ssh -p ${port('port')}${forwarding} -- ${host}`);
-            break;
-          }
+          case 'ssh-terminal': await controller.openTerminal(); break;
         }
       } catch (error) { this.status.textContent = error.message; }
       finally { button.disabled = false; }
@@ -105,6 +86,7 @@ module.exports = function installDevelopmentTools(bind) {
         await shell.activateWidget(widget.id);
         return widget;
       },
+      async openTerminal() { return container.get(require('@theia/core/lib/common/command').CommandRegistry).executeCommand('terminal:new'); },
       async openGit() { window.dispatchEvent(new Event('plain-open-source-control')); },
       async launch(title, command) {
         const [root] = await workspace.roots;

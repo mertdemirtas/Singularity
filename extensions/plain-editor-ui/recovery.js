@@ -47,7 +47,7 @@ class RecoveryController {
 
   track(widget) {
     const document = widget.editor?.document;
-    if (!document || this.documents.has(document) || !/^(file|untitled):/.test(document.uri)) return;
+    if (!document || this.documents.has(document) || !/^(file|untitled|ssh):/.test(document.uri)) return;
     const entry = this.restoring.get(document.uri);
     const session = { document, id: entry?.id || crypto.randomUUID(), uri: entry?.uri || document.uri, backedUp: Boolean(entry) };
     this.documents.set(document, session);

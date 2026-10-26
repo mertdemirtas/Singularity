@@ -6,6 +6,7 @@ const { BackendApplicationContribution, EarlyExpressMiddleware } = require('@the
 const { PluginScanner } = require('@theia/plugin-ext/lib/common/plugin-protocol');
 
 module.exports = new ContainerModule(bind => {
+  require('./ssh-backend')(bind);
   bind(BackendApplicationContribution).toDynamicValue(({ container }) => ({
     initialize() {
       if (process.env.SINGULARITY_DESKTOP === '1') {

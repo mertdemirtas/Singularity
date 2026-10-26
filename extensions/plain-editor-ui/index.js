@@ -203,6 +203,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
   bind(WidgetFactory).toConstantValue({ id: welcome.ID, createWidget: () => welcome.createWelcome(icon) });
   require('./extensions-panel')(bind);
   require('./development-tools')(bind);
+  require('./ssh-frontend')(bind);
   require('./git-tools')(bind);
   require('./pdf-export')(bind);
   bind(PreferenceContribution).toConstantValue({ schema: {
