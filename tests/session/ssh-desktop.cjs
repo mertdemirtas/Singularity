@@ -7,7 +7,7 @@ const artifacts = process.env.RUNNER_TEMP ? path.join(process.env.RUNNER_TEMP, '
 fs.mkdirSync(artifacts, { recursive: true });
 const directory = fs.mkdtempSync(path.join(artifacts, 'singularity-ssh-desktop-'));
 const config = path.join(directory, 'config'), local = path.join(directory, 'local'); fs.mkdirSync(config); fs.mkdirSync(local);
-fs.writeFileSync(path.join(config, 'settings.json'), JSON.stringify({ 'security.workspace.trust.enabled': false, 'files.autoSave': 'off', 'git.autofetch': false, 'telemetry.telemetryLevel': 'off' }));
+fs.writeFileSync(path.join(config, 'settings.json'), JSON.stringify({ 'security.workspace.trust.enabled': false, 'files.autoSave': 'off', 'git.autofetch': false, 'telemetry.telemetryLevel': 'off', ...(process.env.SSH_TEST_SHELL ? { 'terminal.integrated.shell.osx': process.env.SSH_TEST_SHELL } : {}) }));
 fs.writeFileSync(path.join(config, 'recentworkspace.json'), JSON.stringify({ recentRoots: [pathToFileURL(local).href] }));
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 let device, child, browser, page;
@@ -69,6 +69,30 @@ async function close() {
   await page.evaluate(() => { const editor = sshTestShell.mainPanel.currentTitle.owner.editor.getControl(); editor.setValue('saved from Singularity over SSH 🪐\n'); editor.focus(); });
   await pause(150); const modifier = process.platform === 'darwin' ? 'Meta' : 'Control'; await page.keyboard.down(modifier); await page.keyboard.press('s'); await page.keyboard.up(modifier);
   await until(() => fs.readFileSync(path.join(device.directory, 'project/remote.txt'), 'utf8') === 'saved from Singularity over SSH 🪐\n', 'Ctrl+S updates remote file');
+  await page.evaluate(() => {
+    const widget = sshTestShell.mainPanel.currentTitle.owner, resource = widget.editor.document.resource;
+    window.sshOriginalSave = resource.saveContents;
+    resource.saveContents = async function (...args) {
+      window.sshSaveEntered = true;
+      await new Promise(resolve => { window.sshReleaseSave = resolve; });
+      return sshOriginalSave.apply(this, args);
+    };
+    widget.editor.getControl().setValue('snapshot sent before newer edits\n');
+    window.sshPendingSave = widget.saveable.save();
+  });
+  await page.waitForFunction(() => window.sshSaveEntered);
+  await page.evaluate(async () => {
+    const widget = sshTestShell.mainPanel.currentTitle.owner;
+    widget.editor.getControl().setValue('newer text typed during the save\n');
+    sshReleaseSave(); await sshPendingSave;
+    if (!widget.saveable.dirty) throw Error('Newer remote edits must remain unsaved');
+    widget.editor.document.resource.saveContents = sshOriginalSave;
+  });
+  assert.equal(fs.readFileSync(path.join(device.directory, 'project/remote.txt'), 'utf8'), 'snapshot sent before newer edits\n');
+  await page.evaluate(async () => {
+    const widget = sshTestShell.mainPanel.currentTitle.owner;
+    widget.editor.getControl().setValue('saved from Singularity over SSH 🪐\n'); await widget.saveable.save();
+  });
   await page.evaluate(() => sshTestShell.mainPanel.currentTitle.owner.editor.getControl().setValue('unsaved remote draft 🪐\n'));
   await until(async () => (await page.evaluate(() => plainEditorDesktop.listRecovery())).entries.some(entry => entry.uri.startsWith('ssh://') && entry.text === 'unsaved remote draft 🪐\n'), 'remote recovery checkpoint');
   await page.evaluate(() => sshTestShell.mainPanel.currentTitle.owner.saveable.revert());
