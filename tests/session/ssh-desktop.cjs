@@ -28,6 +28,7 @@ async function launch() {
     const values = [...theia.container._bindingDictionary._map.values()].flat().map(binding => binding.cache);
     window.sshTestShell = values.find(value => Object.keys(value || {}).includes('mainPanel'));
     window.sshTestCommands = values.find(value => Object.keys(value || {}).includes('_commands'));
+    window.sshTestConnection = values.find(value => Object.keys(value || {}).includes('_socket') && Object.keys(value || {}).includes('currentChannel'));
   });
 }
 async function terminal() {
@@ -57,6 +58,12 @@ async function close() {
   device = await fixture(); await launch(); await connect(true);
   await page.waitForSelector('#files .theia-TreeNode[title*="/home/tester/project"]', { visible: true });
   await page.waitForSelector('#files .theia-TreeNode[title*="remote.txt"] .theia-TreeNodeSegmentGrow', { visible: true });
+  await page.evaluate(() => { window.sshTestChannel = sshTestConnection.currentChannel; sshTestConnection.socket.disconnect(); });
+  await pause(200); await page.evaluate(() => sshTestConnection.socket.connect());
+  await page.waitForFunction(() => sshTestConnection.socket.connected);
+  assert(await page.evaluate(() => sshTestConnection.currentChannel === sshTestChannel), 'Brief disconnect preserves SSH RPC state');
+  await type('echo AFTER_RECONNECT\r');
+  await until(() => outputContains('REMOTE: echo AFTER_RECONNECT'), 'remote shell survives editor disconnect');
   await page.$eval('#files .theia-TreeNode[title*="remote.txt"] .theia-TreeNodeSegmentGrow', node => node.click());
   await page.waitForFunction(() => sshTestShell.mainPanel.currentTitle?.owner.editor?.uri.scheme === 'ssh');
   await page.evaluate(() => { const editor = sshTestShell.mainPanel.currentTitle.owner.editor.getControl(); editor.setValue('saved from Singularity over SSH 🪐\n'); editor.focus(); });

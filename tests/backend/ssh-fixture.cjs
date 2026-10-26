@@ -4,7 +4,7 @@ const { generateKeyPairSync } = require('node:crypto');
 const { Server, utils: { sftp: { STATUS_CODE: S, flagsToString } } } = require('ssh2');
 const hostKey = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey.export({ type: 'pkcs1', format: 'pem' });
 async function fixture() {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'singularity-ssh-device-'));
+  const directory = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'singularity-ssh-device-')));
   await fs.mkdir(path.join(directory, 'project')); await fs.writeFile(path.join(directory, 'project', 'remote.txt'), 'hello from the remote device\n');
   const clients = new Set(), writes = [], shellInput = [], state = { failRename: false, failWrite: false };
   const home = '/home/tester';
