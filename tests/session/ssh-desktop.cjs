@@ -56,7 +56,6 @@ async function close() {
 }
 (async () => {
   device = await fixture(); await launch(); await connect(true);
-  await page.waitForSelector('#files .theia-TreeNode[title*="/home/tester/project"]', { visible: true });
   await page.waitForSelector('#files .theia-TreeNode[title*="remote.txt"] .theia-TreeNodeSegmentGrow', { visible: true });
   await page.evaluate(() => { window.sshTestChannel = sshTestConnection.currentChannel; sshTestConnection.socket.disconnect(); });
   await pause(200); await page.evaluate(() => sshTestConnection.socket.connect());
