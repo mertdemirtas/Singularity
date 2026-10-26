@@ -187,6 +187,7 @@ function buildSettings() {
 
 module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
   require('./save-participants');
+  require('./save-version');
   require('./large-files')(rebind);
   require('./view-interaction')(rebind);
   require('./editor-lifecycle')(rebind);
