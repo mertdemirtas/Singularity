@@ -1,4 +1,5 @@
 'use strict';
+const { OS } = require('@theia/core/lib/common/os');
 const URI = require('@theia/core/lib/common/uri').default;
 const { Emitter } = require('@theia/core/lib/common/event');
 const { CommandContribution } = require('@theia/core/lib/common/command');
@@ -87,10 +88,8 @@ module.exports = bind => {
         TerminalWidgetImpl.prototype.createTerminal = async function () {
           if (this.options.isPseudoTerminal || this.kind !== 'user') return original.call(this);
           const connection = await server.terminalEnvironment();
-          const env = { ...(this.options.env || {}) }, originalPath = env.SINGULARITY_SSH_ORIGINAL_PATH || env.PATH || env.Path || connection.originalPath;
-          delete env.Path;
-          this.options = { ...this.options, env: { ...env, PATH: connection.directory + connection.delimiter + originalPath,
-            SINGULARITY_SSH_ORIGINAL_PATH: originalPath, SINGULARITY_SSH_PORT: String(connection.port), SINGULARITY_SSH_TOKEN: connection.token } };
+          const shellPath = this.options.shellPath || this.shellPreferences.shell[OS.backend.type()] || connection.shell;
+          this.options = { ...this.options, env: require('./ssh-shell.cjs').terminalEnvironment(this.options.env, connection, shellPath) };
           return original.call(this);
         };
         for (const [address, options] of await storage().getData('singularity.ssh.pendingEditors', [])) pendingEditors.set(address, options);

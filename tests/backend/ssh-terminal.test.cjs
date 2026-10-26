@@ -54,3 +54,19 @@ test('workspace conversion preserves remote schemes, folder order and local conv
   const result = preserveSshFolders((value, workspace) => { converted.push(value.folders[0].path); assert.equal(workspace, 'workspace'); return { folders: [{ path: 'converted:' + value.folders[0].path }] }; })(data, 'workspace');
   assert.deepEqual(converted, ['/local', '../other']); assert.equal(result.folders[1].path, 'ssh://connection/home/user'); assert.equal(result.folders[1].name, 'Remote'); assert.equal(result.settings, settings); assert.equal(data.folders[0].path, '/local');
 });
+test('Bash and Zsh retain the IDE SSH command when login scripts reorder PATH', async t => {
+  if (process.platform === 'win32') { t.skip('POSIX login shells'); return; }
+  const fs = require('node:fs/promises'), { spawnSync } = require('node:child_process');
+  const { terminalEnvironment } = require('../../extensions/plain-editor-ui/ssh-shell.cjs');
+  const connections = new SshConnections({ get: async () => [] }), bridge = new SshTerminalBridge(connections, {});
+  t.after(async () => { await bridge.dispose(); connections.dispose(); });
+  const details = { ...await bridge.ready, originalPath: process.env.PATH, delimiter: path.delimiter, platform: process.platform, zdotdir: '' };
+  await fs.writeFile(path.join(details.directory, 'ssh'), '#!/bin/sh\nprintf "INTEGRATED_SSH:%s:%s" "$1" "$SINGULARITY_TEST_USER_RC"\n', { mode: 0o700 });
+  const original = path.join(details.directory, 'original'); await fs.mkdir(original);
+  await fs.writeFile(path.join(original, '.zshenv'), 'export SINGULARITY_TEST_USER_RC=loaded\n');
+  const env = terminalEnvironment({ ZDOTDIR: original }, details, '/bin/zsh');
+  const bash = spawnSync('/bin/bash', ['--noprofile', '--norc', '-lc', 'PATH=/usr/bin:/bin; ssh "host with spaces"'], { env: { ...process.env, ...env }, encoding: 'utf8' });
+  assert.equal(bash.status, 0, bash.stderr); assert.match(bash.stdout, /INTEGRATED_SSH:host with spaces:/);
+  const zsh = spawnSync('/bin/zsh', ['-lc', 'PATH=/usr/bin:/bin; ssh "host with spaces"; test "$ZDOTDIR" = "$SINGULARITY_SSH_ORIGINAL_ZDOTDIR"'], { env: { ...process.env, ...env }, encoding: 'utf8' });
+  if (zsh.error?.code !== 'ENOENT') { assert.equal(zsh.status, 0, zsh.stderr); assert.match(zsh.stdout, /INTEGRATED_SSH:host with spaces:loaded/); }
+});

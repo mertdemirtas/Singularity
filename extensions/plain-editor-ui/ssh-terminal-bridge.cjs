@@ -13,9 +13,19 @@ class SshTerminalBridge {
     const script = path.join(process.cwd(), 'extensions/plain-editor-ui/ssh-cli.cjs');
     await fs.writeFile(path.join(this.directory, 'ssh'), `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(script)} "$@"\n`, { mode: 0o700 });
     await fs.writeFile(path.join(this.directory, 'ssh.cmd'), `@echo off\r\n"${process.execPath.replace(/%/g, '%%')}" "${script.replace(/%/g, '%%')}" %*\r\n`, { mode: 0o700 });
+    const zshDirectory = path.join(this.directory, 'zsh'); await fs.mkdir(zshDirectory);
+    await fs.writeFile(path.join(zshDirectory, '.zshenv'), `# Preserve the user's startup files; only intercept SSH in this IDE terminal.
+if [ -n "$SINGULARITY_SSH_ORIGINAL_ZDOTDIR" ]; then
+  export ZDOTDIR="$SINGULARITY_SSH_ORIGINAL_ZDOTDIR"
+else
+  unset ZDOTDIR
+fi
+if [ -r "\${ZDOTDIR:-$HOME}/.zshenv" ]; then . "\${ZDOTDIR:-$HOME}/.zshenv"; fi
+ssh() { command "$SINGULARITY_SSH_BIN/ssh" "$@"; }
+`, { mode: 0o600 });
     this.server = net.createServer(socket => this.accept(socket));
     await new Promise((resolve, reject) => { this.server.once('error', reject); this.server.listen(0, '127.0.0.1', resolve); });
-    return { directory: this.directory, port: this.server.address().port, token: this.token };
+    return { directory: this.directory, port: this.server.address().port, token: this.token, zshDirectory };
   }
   accept(socket) {
     if (this.disposed) { socket.destroy(); return; }

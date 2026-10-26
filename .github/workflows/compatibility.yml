@@ -258,6 +258,12 @@ jobs:
           else
             node tests/session/ssh-desktop.cjs
           fi
+      - name: SSH with macOS Zsh
+        if: runner.os == 'macOS'
+        timeout-minutes: 5
+        env:
+          SSH_TEST_SHELL: /bin/zsh
+        run: node tests/session/ssh-desktop.cjs
       - name: Prepare recovery desktop check
         run: |
           cat > "$RUNNER_TEMP/singularity-recovery-check.cjs" <<'JS'

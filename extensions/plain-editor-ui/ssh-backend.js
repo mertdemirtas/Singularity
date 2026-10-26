@@ -19,7 +19,7 @@ class SshServer extends FileSystemProviderServer {
   read(fd, position, length) { return super.read(fd, position, Math.min(length, 65536)); }
   async terminalEnvironment() {
     this.bridge ||= new (require('./ssh-terminal-bridge.cjs').SshTerminalBridge)(this.connections, this.client);
-    const details = await this.bridge.ready; return { ...details, delimiter: path.delimiter, originalPath: process.env.PATH || '' };
+    const details = await this.bridge.ready; return { ...details, delimiter: path.delimiter, originalPath: process.env.PATH || '', shell: process.env.THEIA_SHELL || process.env.SHELL || '', zdotdir: process.env.ZDOTDIR || '', platform: process.platform };
   }
   dispose() { this.bridge?.dispose().catch(error => console.error('SSH terminal cleanup:', error.message)); super.dispose(); }
 
