@@ -59,6 +59,22 @@ Use **Cmd** instead of **Ctrl** on macOS.
 | Close tab | Ctrl+W |
 | Settings | Ctrl+, |
 
+## SSH remote files
+
+Open the integrated terminal and connect normally:
+
+```sh
+ssh user@host
+# Optional port or private key:
+ssh -p 2222 -i ~/.ssh/id_ed25519 user@host
+```
+
+Confirm the device’s host-key fingerprint and enter any password or key passphrase in the terminal. Its home folder appears automatically in **Files**. Open and edit remote files normally; **Ctrl+S** saves to the connected device. The server must support SSH and SFTP. Passwords and passphrases are not saved.
+
+After restarting, remote folders are marked offline. Reconnect in the terminal to reopen their file tabs. Ending the shell leaves file access connected; use **Singularity: Disconnect SSH** in the command palette to disconnect, or **Forget SSH Connection** to remove its saved details and host key.
+
+Direct connections support passwords, private keys, SSH agents, and common OpenSSH host aliases. Advanced SSH options, jump hosts and remote command invocations use your system’s OpenSSH client without automatic file browsing. Extensions still execute locally; run remote programs in the SSH terminal.
+
 ## Updates
 
 Singularity checks for updates automatically. You can also use **Menu → Check for updates**. Choose **Update and restart** when a new version is available.

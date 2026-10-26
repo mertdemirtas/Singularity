@@ -250,6 +250,14 @@ jobs:
           else
             node "$RUNNER_TEMP/singularity-native-check.cjs"
           fi
+      - name: SSH terminal and remote files
+        timeout-minutes: 5
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a node tests/session/ssh-desktop.cjs
+          else
+            node tests/session/ssh-desktop.cjs
+          fi
       - name: Prepare recovery desktop check
         run: |
           cat > "$RUNNER_TEMP/singularity-recovery-check.cjs" <<'JS'
