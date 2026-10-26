@@ -36,6 +36,7 @@ const AppHistory = require('./app-history');
 const { primaryPressed, navigationShortcut, navigationDirection } = require('./platform');
 const { UntitledResourceResolver } = require('@theia/core/lib/common/resource');
 const { RecoveryController, ENABLED: RECOVERY_ENABLED } = require('./recovery');
+const { REMOTE_VIEW } = require('./ssh-protocol');
 const focusChanged = new Emitter();
 
 const icons = {
@@ -43,6 +44,7 @@ const icons = {
   folder: '<path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5Z"/>',
   save: '<path d="M4 3h13l3 3v15H4Z"/><path d="M8 3v6h8V3M8 21v-8h8v8"/>',
   files: '<path d="M6 4h12v15H6zM9 2h9M4 7H2v15h13v-2"/>',
+  remote: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4m-4-9 2-2-2-2m5 5h3"/>',
   terminal: '<path d="m4 7 5 5-5 5M11 18h9"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.5-.7-1.6 1-1.8-2.2-2.2-1.8 1-1.6-.7-.5-2h-3l-.5 2-1.6.7-1.8-1-2.2 2.2 1 1.8-.7 1.6-2 .5v3l2 .5.7 1.6-1 1.8 2.2 2.2 1.8-1 1.6.7.5 2h3l.5-2 1.6-.7 1.8 1 2.2-2.2-1-1.8.7-1.6Z"/>',
   more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
@@ -80,6 +82,7 @@ function buildHeader() {
     <div class="plain-rail-tools">
       ${button('Files', 'files', 'files', 'plain-icon-only')}
       ${button('Source Control', 'git', 'source-control', 'plain-icon-only')}
+      ${button('Remote', 'remote', 'remote', 'plain-icon-only')}
     </div>
     <div class="plain-rail-footer">
       ${button('Extensions', 'extensions', 'extensions', 'plain-icon-only')}
@@ -458,7 +461,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       chrome?.applyLayout();
       focusChanged.fire();
     };
-    const sideWidgets = { files: 'explorer-view-container', extensions: 'vsx-extensions-view-container' };
+    const sideWidgets = { remote: REMOTE_VIEW, files: 'explorer-view-container', extensions: 'vsx-extensions-view-container' };
     const closePreview = async () => {
       clearTimeout(hoverTimer);
       if (!previewSide) return;
@@ -466,7 +469,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       document.body.classList.remove('plain-side-peek');
       if (!pinnedSide) await shell.collapsePanel(panelArea());
     };
-    const openSide = async (name, preview = false) => {
+    const openSide = async (name, preview = false, force = false) => {
       if (preview && header.classList.contains('plain-sidebar-dragging')) return;
       if (!preferences.get(SIDEBAR_VISIBLE, true)) {
         if (preview) return;
@@ -480,7 +483,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       const area = panelArea();
       clearTimeout(hoverTimer);
       if (preview && pinnedSide) return;
-      if (!preview && !navigating && pinnedSide === id && shell.getWidgetById(id) && shell.isExpanded(area)) {
+      if (!preview && !force && !navigating && pinnedSide === id && shell.getWidgetById(id) && shell.isExpanded(area)) {
         pinnedSide = '';
         await closePreview();
         await shell.collapsePanel(area);
@@ -580,6 +583,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       maximize: () => window.plainEditorDesktop?.windowAction('maximize'),
       'window-close': () => window.plainEditorDesktop?.windowAction('close'),
       files: () => openSide('files'),
+      remote: () => openSide('remote'),
       extensions: () => openSide('extensions'),
       browser: () => execute('plain-editor.browser'),
       development: () => execute('plain-editor.development'),
@@ -804,7 +808,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
           openSettings: () => actions.settings(),
           onHideSidebarItem: async control => {
             const selected = shell.leftPanelHandler.tabBar.currentTitle?.owner.id;
-            const id = control?.dataset.plainView || { files: 'explorer-view-container', 'source-control': 'scm-view-container', extensions: 'vsx-extensions-view-container' }[control?.dataset.plainAction];
+            const id = control?.dataset.plainView || { remote: REMOTE_VIEW, files: 'explorer-view-container', 'source-control': 'scm-view-container', extensions: 'vsx-extensions-view-container' }[control?.dataset.plainAction];
             if (id === selected && shell.isExpanded('left')) await actions['toggle-pane']();
           },
           openExtensionSettings: async id => {
@@ -820,6 +824,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
             container.get(require('./extensions-panel').Catalog).openSettings(extension);
           }
         });
+        window.addEventListener('plain-open-remote', () => openSide('remote', false, true).catch(error => messages.error(error.message)));
         window.addEventListener('plain-open-source-control', () => actions['source-control']().catch(error => messages.error(error.message)));
         window.addEventListener('plain-toggle-focus', toggleFocus);
         window.addEventListener('plain-toggle-pane', () => actions['toggle-pane']());
@@ -887,7 +892,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
             if (previewSide) hoverTimer = setTimeout(closePreview, 250);
           });
         }
-        for (const name of ['files', 'extensions']) {
+        for (const name of ['files', 'remote', 'extensions']) {
           const control = header.querySelector(`[data-plain-action="${name}"]`);
           control.addEventListener('pointerenter', event => {
             if (event?.pointerType === 'touch') return;

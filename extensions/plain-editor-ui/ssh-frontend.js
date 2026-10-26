@@ -16,8 +16,9 @@ const { WorkspaceService } = require('@theia/workspace/lib/browser/workspace-ser
 const { WidgetManager } = require('@theia/core/lib/browser/widget-manager');
 const { WorkspaceStorageService } = require('@theia/workspace/lib/browser/workspace-storage-service');
 const { EditorManager } = require('@theia/editor/lib/browser/editor-manager');
-const { SSH_PATH, SSH_CONTROLLER } = require('./ssh-protocol');
+const { SSH_PATH, SSH_CONTROLLER, REMOTE_VIEW } = require('./ssh-protocol');
 module.exports = bind => {
+  require('./ssh-navigator')(bind);
   const { WorkspaceData } = require('@theia/workspace/lib/browser/workspace-service');
   const { preserveSshFolders } = require('./ssh-workspace.cjs');
   for (const method of ['transformToRelative', 'transformToAbsolute']) WorkspaceData[method] = preserveSshFolders(WorkspaceData[method]);
@@ -42,12 +43,10 @@ module.exports = bind => {
           const file = service.workspace.resource;
           await service.save(file.parent.resolve(`SSH-${value.id}-${Date.now()}.theia-workspace`));
         }
-        const navigator = await container.get(require('@theia/navigator/lib/browser/navigator-contribution').FileNavigatorContribution).openView({ activate: false });
-        // Workspace change handlers create roots asynchronously. Await the same
-        // model update before revealing the new device's home directory.
+        const navigator = await container.get(WidgetManager).getOrCreateWidget(REMOTE_VIEW);
         await navigator.model.updateRoot();
         await navigator.model.revealFile(uri);
-        await shell().revealWidget('explorer-view-container');
+        window.dispatchEvent(new Event('plain-open-remote'));
         for (const [address, options] of pendingEditors) if (new URI(address).authority === value.id) {
           await editors().open(new URI(address), { ...options, mode: 'reveal' });
           pendingEditors.delete(address);

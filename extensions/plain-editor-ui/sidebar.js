@@ -3,7 +3,7 @@
 const ORDER = 'plainEditor.sidebarOrder';
 const HIDDEN = 'plainEditor.hiddenSidebarItems';
 const BOTTOM = '$bottom';
-const DEFAULT_ORDER = ['files', 'source-control', BOTTOM, 'extensions', 'terminal', 'menu'];
+const DEFAULT_ORDER = ['files', 'source-control', 'remote', BOTTOM, 'extensions', 'terminal', 'menu'];
 
 function itemOrder(saved, available) {
   const result = [...new Set((Array.isArray(saved) ? saved : DEFAULT_ORDER).filter(id => typeof id === 'string'))];

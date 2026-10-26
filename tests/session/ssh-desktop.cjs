@@ -7,6 +7,7 @@ const artifacts = process.env.RUNNER_TEMP ? path.join(process.env.RUNNER_TEMP, '
 fs.mkdirSync(artifacts, { recursive: true });
 const directory = fs.mkdtempSync(path.join(artifacts, 'singularity-ssh-desktop-'));
 const config = path.join(directory, 'config'), local = path.join(directory, 'local'); fs.mkdirSync(config); fs.mkdirSync(local);
+fs.writeFileSync(path.join(local, 'local.txt'), 'local project file\n');
 fs.writeFileSync(path.join(config, 'settings.json'), JSON.stringify({ 'security.workspace.trust.enabled': false, 'files.autoSave': 'off', 'git.autofetch': false, 'telemetry.telemetryLevel': 'off', ...(process.env.SSH_TEST_SHELL ? { 'terminal.integrated.shell.osx': process.env.SSH_TEST_SHELL } : {}) }));
 fs.writeFileSync(path.join(config, 'recentworkspace.json'), JSON.stringify({ recentRoots: [pathToFileURL(local).href] }));
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -55,15 +56,24 @@ async function close() {
   await browser.disconnect(); child.stdout.destroy(); child.stderr.destroy();
 }
 (async () => {
-  device = await fixture(); await launch(); await connect(true);
-  await page.waitForSelector('#files .theia-TreeNode[title*="remote.txt"] .theia-TreeNodeSegmentGrow', { visible: true });
+  device = await fixture(); await launch();
+  await page.$eval('.plain-rail-tools [data-plain-action="remote"]', node => node.click());
+  await page.waitForFunction(() => document.querySelector('#singularity-remote')?.innerText.includes('ssh user@host'));
+  await connect(true);
+  await page.waitForSelector('#singularity-remote .theia-TreeNode[title*="remote.txt"] .theia-TreeNodeSegmentGrow', { visible: true });
+  assert(!await page.$('#singularity-remote .theia-TreeNode[title$="local.txt"]'), 'Remote excludes local files');
+  await page.$eval('.plain-rail-tools [data-plain-action="files"]', node => node.click());
+  await page.waitForSelector('#files .theia-TreeNode[title$="local.txt"]', { visible: true });
+  assert(!await page.$('#files .theia-TreeNode[title*="remote.txt"]'), 'Files excludes remote files');
+  await page.$eval('.plain-rail-tools [data-plain-action="remote"]', node => node.click());
+  await page.waitForSelector('#singularity-remote .theia-TreeNode[title*="remote.txt"]', { visible: true });
   await page.evaluate(() => { window.sshTestChannel = sshTestConnection.currentChannel; sshTestConnection.socket.disconnect(); });
   await pause(200); await page.evaluate(() => sshTestConnection.socket.connect());
   await page.waitForFunction(() => sshTestConnection.socket.connected);
   assert(await page.evaluate(() => sshTestConnection.currentChannel === sshTestChannel), 'Brief disconnect preserves SSH RPC state');
   await type('echo AFTER_RECONNECT\r');
   await until(() => outputContains('REMOTE: echo AFTER_RECONNECT'), 'remote shell survives editor disconnect');
-  await page.$eval('#files .theia-TreeNode[title*="remote.txt"] .theia-TreeNodeSegmentGrow', node => node.click());
+  await page.$eval('#singularity-remote .theia-TreeNode[title*="remote.txt"] .theia-TreeNodeSegmentGrow', node => node.click());
   await page.waitForFunction(() => sshTestShell.mainPanel.currentTitle?.owner.editor?.uri.scheme === 'ssh');
   await page.evaluate(() => { const editor = sshTestShell.mainPanel.currentTitle.owner.editor.getControl(); editor.setValue('saved from Singularity over SSH 🪐\n'); editor.focus(); });
   await pause(150); const modifier = process.platform === 'darwin' ? 'Meta' : 'Control'; await page.keyboard.down(modifier); await page.keyboard.press('s'); await page.keyboard.up(modifier);
@@ -99,12 +109,12 @@ async function close() {
   await type('echo SSH_TERMINAL_TEST\r'); await until(() => device.shellInput.join('').includes('SSH_TERMINAL_TEST'), 'terminal input reaches remote SSH shell');
   await page.screenshot({ path: path.join(directory, 'remote-editor.png') }); await close();
   await launch();
-  await page.$eval('.plain-rail-tools [data-plain-action="files"]', node => node.click());
-  await page.waitForFunction(() => document.querySelector('#files')?.innerText.includes('offline'));
+  await page.$eval('.plain-rail-tools [data-plain-action="remote"]', node => node.click());
+  await page.waitForFunction(() => document.querySelector('#singularity-remote')?.innerText.includes('offline'));
   console.log('Remote workspace restored offline without a sign-in dialog');
   await connect(false);
   await page.waitForFunction(() => [...sshTestShell.mainPanel.widgets()].some(widget => widget.editor?.uri.scheme === 'ssh' && widget.editor.document.getText() === 'saved from Singularity over SSH 🪐\n'));
-  await close(); console.log('PASS: normal ssh command, terminal sign-in, remote tree, Ctrl+S, SSH shell and restart/reconnect');
+  await close(); console.log('PASS: separate local/remote sections, normal ssh command, terminal sign-in, remote tree, Ctrl+S, SSH shell and restart/reconnect');
 })().catch(async error => {
   console.error(error.stack); process.exitCode = 1;
   if (page) { console.error(await page.evaluate(() => document.body.innerText).catch(() => 'closed')); await page.screenshot({ path: path.join(directory, 'failure.png') }).catch(() => {}); }

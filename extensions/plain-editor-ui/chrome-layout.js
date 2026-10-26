@@ -1,10 +1,11 @@
 'use strict';
 
+const { REMOTE_VIEW } = require('./ssh-protocol');
 const SIDEBAR_VISIBLE = 'plainEditor.sidebarVisible';
 const extensionViewItems = require('./extension-view-items');
 const { PreferenceScope } = require('@theia/core/lib/common/preferences/preference-scope');
 const { Sidebar } = require('./sidebar');
-const managed = widget => widget.id === 'explorer-view-container' || widget.id === 'scm-view-container' || widget.id === 'vsx-extensions-view-container' || widget.id.startsWith('plugin-view-container:');
+const managed = widget => widget.id === REMOTE_VIEW || widget.id === 'explorer-view-container' || widget.id === 'scm-view-container' || widget.id === 'vsx-extensions-view-container' || widget.id.startsWith('plugin-view-container:');
 
 module.exports = function createChromeLayout({ shell, preferences, header, titlebar, navigation, viewRegistry, plugins, contextKeys, getOpenPane, openView, openExtensionSettings, openFolder, openSettings, onHideSidebarItem, messages, icon }) {
   let queued = false;
@@ -145,7 +146,7 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
       if (open) open.hidden = sideHandler.tabBar.currentTitle?.owner.id !== 'explorer-view-container';
     }
     for (const { button: control } of sidebar.items.values()) {
-      const id = control.dataset.plainView || { files: 'explorer-view-container', extensions: 'vsx-extensions-view-container', 'source-control': 'scm-view-container' }[control.dataset.plainAction];
+      const id = control.dataset.plainView || { remote: REMOTE_VIEW, files: 'explorer-view-container', extensions: 'vsx-extensions-view-container', 'source-control': 'scm-view-container' }[control.dataset.plainAction];
       if (!id) continue;
       const pressed = String(id === selected || (control.dataset.plainAction === 'source-control' && shell.mainPanel.currentTitle?.owner.id === 'plain-git'));
       if (control.getAttribute('aria-pressed') !== pressed) control.setAttribute('aria-pressed', pressed);

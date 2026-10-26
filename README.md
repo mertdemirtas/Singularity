@@ -69,7 +69,7 @@ ssh user@host
 ssh -p 2222 -i ~/.ssh/id_ed25519 user@host
 ```
 
-Confirm the device’s host-key fingerprint and enter any password or key passphrase in the terminal. Its home folder appears automatically in **Files**. Open and edit remote files normally; **Ctrl+S** saves to the connected device. The server must support SSH and SFTP. Passwords and passphrases are not saved.
+Confirm the device’s host-key fingerprint and enter any password or key passphrase in the terminal. Its home folder appears automatically in the separate **Remote** sidebar section. **Files** keeps your local folders. Open and edit remote files normally; **Ctrl+S** saves to the connected device. The server must support SSH and SFTP. Passwords and passphrases are not saved.
 
 After restarting, remote folders are marked offline. Reconnect in the terminal to reopen their file tabs. Ending the shell leaves file access connected; use **Singularity: Disconnect SSH** in the command palette to disconnect, or **Forget SSH Connection** to remove its saved details and host key.
 

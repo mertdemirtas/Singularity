@@ -70,3 +70,14 @@ test('Bash and Zsh retain the IDE SSH command when login scripts reorder PATH', 
   const zsh = spawnSync('/bin/zsh', ['-lc', 'PATH=/usr/bin:/bin; ssh "host with spaces"; test "$ZDOTDIR" = "$SINGULARITY_SSH_ORIGINAL_ZDOTDIR"'], { env: { ...process.env, ...env }, encoding: 'utf8' });
   if (zsh.error?.code !== 'ENOENT') { assert.equal(zsh.status, 0, zsh.stderr); assert.match(zsh.stdout, /INTEGRATED_SSH:host with spaces:loaded/); }
 });
+
+test('local and remote navigator scopes keep file trees separate and preserve native nodes', () => {
+  const { scopedRoot } = require('../../extensions/plain-editor-ui/ssh-navigator.cjs');
+  const root = { name: 'Workspace', children: [] }, local = { uri: { scheme: 'file' }, parent: root }, remote = { uri: { scheme: 'ssh' }, parent: root };
+  root.children = [local, remote];
+  assert.equal(scopedRoot(root, false), root); assert.deepEqual(root.children, [local]); assert.equal(local.parent, root); assert.equal(local.visible, false);
+  const devices = { name: 'Workspace', children: [] }, device = { uri: { scheme: 'ssh' }, parent: devices };
+  devices.children = [local, device];
+  scopedRoot(devices, true); assert.deepEqual(devices.children, [device]); assert.equal(devices.name, 'Remote'); assert.equal(device.visible, true); assert.equal(device.parent, devices);
+  assert.equal(scopedRoot(undefined, false), undefined);
+});
