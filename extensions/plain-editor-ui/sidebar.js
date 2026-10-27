@@ -24,8 +24,8 @@ function moveItem(order, id, before) {
 }
 
 class Sidebar {
-  constructor({ header, preferences, savePreference, messages, openSettings, openExtensionSettings, onHide }) {
-    Object.assign(this, { header, preferences, savePreference, messages, openSettings, openExtensionSettings, onHide });
+  constructor({ header, preferences, savePreference, messages, openSettings, openExtensionSettings, canRemoveExtension, removeExtension, onHide }) {
+    Object.assign(this, { header, preferences, savePreference, messages, openSettings, openExtensionSettings, canRemoveExtension, removeExtension, onHide });
     this.items = new Map();
     this.top = header.querySelector('.plain-rail-tools');
     this.bottom = header.querySelector('.plain-rail-footer');
@@ -153,7 +153,10 @@ class Sidebar {
     };
     if (id && this.items.has(id)) {
       const item = this.items.get(id);
-      if (item.extension) add('Extension settings…', () => this.openExtensionSettings(id));
+      if (item.extension) {
+        add('Extension settings…', () => this.openExtensionSettings(id));
+        if (this.canRemoveExtension?.(id)) add('Remove Extension', () => this.removeExtension(id)).classList.add('plain-extension-remove');
+      }
       add(`Hide ${item.label}`, () => this.hide(id));
       const order = this.order(); const index = order.indexOf(id);
       add('Move up', () => this.save(ORDER, moveItem(order, id, order[index - 1]))).disabled = index === 0;

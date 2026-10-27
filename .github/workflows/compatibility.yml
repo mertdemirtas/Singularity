@@ -250,6 +250,14 @@ jobs:
           else
             node "$RUNNER_TEMP/singularity-native-check.cjs"
           fi
+      - name: Extension removal from settings and sidebar
+        timeout-minutes: 3
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a node tests/session/extension-removal.cjs
+          else
+            node tests/session/extension-removal.cjs
+          fi
       - name: SSH terminal and remote files
         timeout-minutes: 5
         run: |

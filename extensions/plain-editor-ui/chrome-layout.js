@@ -7,7 +7,7 @@ const { PreferenceScope } = require('@theia/core/lib/common/preferences/preferen
 const { Sidebar } = require('./sidebar');
 const managed = widget => widget.id === REMOTE_VIEW || widget.id === 'explorer-view-container' || widget.id === 'scm-view-container' || widget.id === 'vsx-extensions-view-container' || widget.id.startsWith('plugin-view-container:');
 
-module.exports = function createChromeLayout({ shell, preferences, header, titlebar, navigation, viewRegistry, plugins, contextKeys, getOpenPane, openView, openExtensionSettings, openFolder, openSettings, onHideSidebarItem, messages, icon }) {
+module.exports = function createChromeLayout({ shell, preferences, header, titlebar, navigation, viewRegistry, plugins, contextKeys, getOpenPane, openView, openExtensionSettings, canRemoveExtension, removeExtension, openFolder, openSettings, onHideSidebarItem, messages, icon }) {
   let queued = false;
   let iconsDirty = true, geometryDirty = true, paneDirty = true;
   let containerCount = -1, viewCount = -1;
@@ -18,7 +18,7 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
   const controls = new Map();
   let openRequest = 0;
   let iconSignature = '';
-  const sidebar = new Sidebar({ header, preferences, messages, openSettings, openExtensionSettings,
+  const sidebar = new Sidebar({ header, preferences, messages, openSettings, openExtensionSettings, canRemoveExtension, removeExtension,
     savePreference: (key, value) => preferences.set(key, value, PreferenceScope.User), onHide: onHideSidebarItem });
   const area = () => 'left';
   const positionPopover = (popup, anchor) => {

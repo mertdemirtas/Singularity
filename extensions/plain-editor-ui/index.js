@@ -28,7 +28,6 @@ const { WidgetFactory, WidgetManager } = require('@theia/core/lib/browser/widget
 const welcome = require('./welcome');
 const { OpenerService, open: openResource } = require('@theia/core/lib/browser/opener-service');
 const { VSXExtensionsModel } = require('@theia/vsx-registry/lib/browser/vsx-extensions-model');
-const extensionViewOwner = require('./extension-view-owner');
 const createChromeLayout = require('./chrome-layout');
 const { SIDEBAR_VISIBLE } = createChromeLayout;
 const { ORDER: SIDEBAR_ORDER, HIDDEN: HIDDEN_SIDEBAR_ITEMS, DEFAULT_ORDER } = require('./sidebar');
@@ -812,16 +811,13 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
             if (id === selected && shell.isExpanded('left')) await actions['toggle-pane']();
           },
           openExtensionSettings: async id => {
-            const deployed = plugins.plugins.map(metadata => plugins.getPlugin(metadata.model.id)).filter(Boolean);
-            const owner = extensionViewOwner(id, deployed);
-            if (!owner) { messages.info('This extension is no longer available.'); return; }
-            const model = container.get(VSXExtensionsModel);
-            await model.initialized;
-            const extension = model.getExtension(owner.metadata.model.id) || {
-              id: owner.metadata.model.id, displayName: owner.metadata.model.displayName,
-              installed: true, plugin: owner
-            };
-            container.get(require('./extensions-panel').Catalog).openSettings(extension);
+            const catalog = container.get(require('./extensions-panel').Catalog);
+            catalog.openSettings(await catalog.extensionForView(id));
+          },
+          canRemoveExtension: id => container.get(require('./extensions-panel').Catalog).canRemoveView(id),
+          removeExtension: async id => {
+            const catalog = container.get(require('./extensions-panel').Catalog);
+            await catalog.removeExtension(await catalog.extensionForView(id));
           }
         });
         window.addEventListener('plain-open-remote', () => openSide('remote', false, true).catch(error => messages.error(error.message)));

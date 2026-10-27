@@ -9,6 +9,12 @@ const { ViewContainerIdentifier } = require('@theia/core/lib/browser/view-contai
 const { SourceTreeWidget } = require('@theia/core/lib/browser/source-tree');
 const { PreferenceService } = require('@theia/core/lib/common/preferences/preference-service');
 const { PreferenceScope } = require('@theia/core/lib/common/preferences/preference-scope');
+const { MessageService } = require('@theia/core/lib/common/message-service');
+const { HostedPluginSupport } = require('@theia/plugin-ext/lib/hosted/browser/hosted-plugin');
+const { PluginType } = require('@theia/plugin-ext');
+const { PluginServer, PluginIdentifiers } = require('@theia/plugin-ext/lib/common/plugin-protocol');
+const extensionViewOwner = require('./extension-view-owner');
+const { ExtensionRemoval } = require('./extension-removal.cjs');
 const { ApplicationServer } = require('@theia/core/lib/common/application-protocol');
 const { OVSXApiFilterProvider } = require('@theia/ovsx-client');
 const { VSXRegistryService } = require('@theia/vsx-registry/lib/common/vsx-registry-service');
@@ -138,7 +144,7 @@ for (const type of [PlainExtensionsSearchBar, PlainExtensionsSource, PlainExtens
   decorate(inject(Catalog), type.prototype, 'catalog');
 }
 
-function createSettingsDialog(preferences) {
+function createSettingsDialog(preferences, catalog) {
   let dialog;
   return extension => {
     if (!dialog) {
@@ -267,6 +273,18 @@ function createSettingsDialog(preferences) {
       emptyFilter.hidden = visible > 0 || !properties.length;
     };
     dialog.append(header, description, search, body);
+    if (catalog.canRemove(extension)) {
+      const footer = document.createElement('div'); footer.className = 'plain-extension-settings-footer';
+      const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Remove Extension';
+      remove.className = 'theia-button plain-extension-remove'; remove.dataset.extensionAction = 'remove';
+      const status = document.createElement('span'); status.setAttribute('role', 'alert');
+      remove.onclick = async () => {
+        remove.disabled = true; remove.textContent = 'Removing…'; status.textContent = '';
+        try { await catalog.removeExtension(extension); dialog.close(); }
+        catch (error) { status.textContent = error.message || String(error); remove.disabled = false; remove.textContent = 'Remove Extension'; }
+      };
+      footer.append(remove, status); dialog.append(footer);
+    }
     if (!dialog.open) dialog.showModal();
   };
 }
@@ -280,7 +298,30 @@ module.exports = function installExtensionsPanel(bind) {
       applicationServer: container.get(ApplicationServer), notify: reason => emitter.fire(reason)
     });
     catalog.onDidChange = emitter.event;
-    catalog.openSettings = createSettingsDialog(container.get(PreferenceService));
+    const messages = container.get(MessageService), plugins = container.get(HostedPluginSupport), server = container.get(PluginServer);
+    const removal = new ExtensionRemoval({
+      verify: async extension => (await server.getUninstalledPlugins()).includes(PluginIdentifiers.idAndVersionToVersionedId({ id: extension.id, version: extension.installedVersion })),
+      refresh: () => catalog.model.updateInstalled(), notify: () => catalog.notify('filters')
+    });
+    const ownerForView = id => extensionViewOwner(id, plugins.plugins.map(metadata => plugins.getPlugin(metadata.model.id)).filter(Boolean));
+    catalog.canRemove = extension => removal.canRemove(extension);
+    catalog.canRemoveView = id => {
+      const owner = ownerForView(id); if (owner?.type !== PluginType.User) return false;
+      const extension = catalog.model.getExtension(owner.metadata.model.id);
+      return extension ? removal.canRemove(extension) : !removal.pending.has(owner.metadata.model.id);
+    };
+    catalog.extensionForView = async id => {
+      const owner = ownerForView(id);
+      if (!owner) throw Error('This extension is no longer available.');
+      await catalog.model.initialized;
+      return catalog.model.getExtension(owner.metadata.model.id) || catalog.extensionFactory({ id: owner.metadata.model.id, model: catalog.model });
+    };
+    catalog.removeExtension = async extension => {
+      await removal.remove(extension);
+      messages.info(`${extension.displayName} removed. Reload the window to finish.`, 'Reload Window')
+        .then(choice => { if (choice === 'Reload Window') extension.reloadWindow(); }).catch(error => messages.error(error.message));
+    };
+    catalog.openSettings = createSettingsDialog(container.get(PreferenceService), catalog);
     return catalog;
   }).inSingletonScope();
 
