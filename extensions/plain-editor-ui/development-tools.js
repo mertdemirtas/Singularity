@@ -31,7 +31,7 @@ class DevelopmentWidget extends BaseWidget {
         <div class="plain-tool-actions"><button data-tool-action="codex">Start Codex</button><button data-tool-action="claude">Start Claude Code</button></div>
         <small>CLI commands can be customized in All settings: plainEditor.ai.codexCommand and plainEditor.ai.claudeCommand.</small>
       </section>
-      <section><h2>Remote SSH</h2><p>Open a terminal and type <code>ssh user@host</code>. Sign in there; the device’s files appear automatically in Files.</p>
+      <section><h2>Remote SSH</h2><p>Open a terminal and type <code>ssh user@host</code>. Sign in there; the device’s files appear automatically in the Remote sidebar.</p>
         <button data-tool-action="ssh-terminal">Open terminal</button></section><div class="plain-tool-status" role="status"></div></div>`;
     this.status = this.node.querySelector('.plain-tool-status');
     this.node.addEventListener('click', async event => {
