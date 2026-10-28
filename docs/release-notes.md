@@ -1,14 +1,13 @@
-## Singularity 0.1.5
+## Singularity 0.1.6
 
-- Improved reliability after sleep, wake and connection interruptions. Existing editor sessions stay connected, and stale socket events cannot interrupt a replacement connection.
-- Fixed stuck tab clicks and drag handles after a lost mouse release or window focus change.
-- Fixed extensions blocking Save and closing indefinitely when their save hooks stop responding. Saves proceed after the hook deadline without accumulating more hung requests.
-- Fixed a memory leak when repeatedly opening and closing editors by releasing their contexts, listeners and link handlers.
-- Improved backend process cleanup after the desktop app exits or crashes.
-- Fixed retrying session persistence after storage errors, and kept unsaved-file checks active when a close attempt fails.
+- Connect to a device by typing `ssh user@host` in the integrated terminal. Browse its files in the separate **Remote** sidebar and save edits directly to the device. Local folders remain in **Files**.
+- Remote connections support passwords, private keys, SSH agents and common OpenSSH aliases. Host keys are verified; passwords and passphrases are never saved. Reconnect from the terminal after restarting to restore remote file tabs.
+- Remove installed extensions from their settings or by right-clicking their sidebar icons. Built-in extensions are protected, and **Reload Window** finishes unloading removed extensions.
+- Fixed slow saves incorrectly marking newer edits as saved. Text typed during disk or network writes remains unsaved until the next save.
+- Fixed invalid SSH port zero silently falling back to port 22.
 
-Verified with backend and session regression tests, native app and installer/update checks on Linux, Windows and both macOS architectures, and a ten-minute stress test with 3,000 project files and a 12 MB CSV. The stress test is accelerated testing, not a full two-hour physical sleep/wake test.
+Verified with 52 backend/session tests, desktop SSH and extension-removal checks, native installer and automatic-update checks on Linux, Windows and both macOS architectures, and a ten-minute session stress test. Advanced SSH options and jump hosts use system OpenSSH without automatic file browsing; extensions continue to run locally.
 
-**Linux users upgrading from 0.1.0–0.1.3:** install the latest `.deb` manually once to migrate to the `singularity-editor` package name. Users on 0.1.4 can update normally.
+**Linux users upgrading from 0.1.0–0.1.3:** install the latest `.deb` manually once to migrate to the `singularity-editor` package name. Users on 0.1.4 or later can update normally.
 
 See [installation and updates](https://github.com/mertdemirtas/Singularity/blob/main/docs/releases.md) for downloads and instructions.

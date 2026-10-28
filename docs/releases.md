@@ -19,7 +19,7 @@ You only need the installer. The `.zip`, `.blockmap`, and update metadata files 
 2. Open a terminal in the folder containing the download and run:
 
    ```sh
-   sudo apt install ./Singularity-0.1.5-linux-amd64.deb
+   sudo apt install ./Singularity-0.1.6-linux-amd64.deb
    ```
 
 3. Open **Singularity** from your applications menu.
