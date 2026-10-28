@@ -6,7 +6,7 @@ const { EventEmitter } = require('node:events');
 
 function profile(input) {
   const value = { id: input.id || randomUUID(), name: String(input.name || input.host || '').trim(),
-    host: String(input.host || '').trim().replace(/^\[|\]$/g, ''), port: Number(input.port || 22),
+    host: String(input.host || '').trim().replace(/^\[|\]$/g, ''), port: Number(input.port ?? 22),
     username: String(input.username || '').trim(), auth: input.auth || 'agent',
     ...(typeof input.agentSocket === 'string' && !input.agentSocket.includes('\0') ? { agentSocket: input.agentSocket } : {}),
     keyPath: String(input.keyPath || '').trim(), folder: String(input.folder || '~').trim() || '~' };

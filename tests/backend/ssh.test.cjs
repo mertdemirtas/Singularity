@@ -130,3 +130,40 @@ test('unsaved SSH documents persist as recovery copies without contacting the re
   const restored = (await new RecoveryStore(directory).list()).entries[0];
   assert.equal(restored.uri, entry.uri); assert.equal(restored.text, entry.text);
 });
+
+test('SSH profiles reject invalid addresses, ports and authentication before connecting', () => {
+  const valid = { host: 'example.com', username: 'tester' };
+  assert.equal(profile(valid).port, 22);
+  assert.equal(profile({ ...valid, host: '[::1]', port: '2222' }).host, '::1');
+  for (const port of [0, -1, 65536, 1.5, NaN, '', 'invalid']) {
+    assert.throws(() => profile({ ...valid, port }), /SSH port/, 'Invalid port: ' + port);
+  }
+  for (const host of ['', '-host', 'host name', 'host/path', 'host\0']) assert.throws(() => profile({ ...valid, host }), /hostname/);
+  assert.throws(() => profile({ ...valid, username: '' }), /username/);
+  assert.throws(() => profile({ ...valid, auth: 'unknown' }), /authentication/);
+  assert.throws(() => profile({ ...valid, auth: 'key' }), /private key/);
+});
+
+test('remote delete and rename safeguards preserve the root, other devices and existing targets', { timeout: 10000 }, async t => {
+  const { device, connections, files, input, uri } = await setup(t);
+  await connections.connect(input, { password: 'test-password' });
+  const before = await files.readFile(uri('remote.txt'));
+  await assert.rejects(files.delete(new URI(`ssh://${input.id}/`), { recursive: true }), /root cannot be deleted/);
+  await assert.rejects(files.rename(uri('remote.txt'), new URI('ssh://other-device/home/tester/remote.txt'), { overwrite: false }), /between SSH devices/);
+  await files.writeFile(uri('target.txt'), Buffer.from('keep target'), { create: true, overwrite: false });
+  await assert.rejects(files.rename(uri('remote.txt'), uri('target.txt'), { overwrite: false }), /target already exists/);
+  await assert.rejects(files.writeFile(uri('missing.txt'), Buffer.from('no create'), { create: false, overwrite: true }), /does not exist/);
+  assert.deepEqual(await files.readFile(uri('remote.txt')), before);
+  assert.equal(Buffer.from(await files.readFile(uri('target.txt'))).toString(), 'keep target');
+  assert.deepEqual((await fs.readdir(path.join(device.directory, 'project'))).sort(), ['remote.txt', 'target.txt']);
+  assert.equal(files.handles.size, 0);
+});
+
+test('SFTP permission errors retain their type and connection identity cannot silently change', { timeout: 10000 }, async t => {
+  const { connections, files, input, uri } = await setup(t);
+  await connections.connect(input, { password: 'test-password' });
+  await assert.rejects(files.stat(uri('../..')), error => error.code === 'NoPermissions' && /outside fixture/.test(error.message));
+  await assert.rejects(connections.connect({ ...input, username: 'other' }), /as a new connection/);
+  assert.equal(connections.sessions.size, 1);
+  assert.equal((await connections.list())[0].username, 'tester');
+});
