@@ -1,12 +1,13 @@
-## Singularity 0.1.6
+## Singularity 0.1.7
 
-- Connect to a device by typing `ssh user@host` in the integrated terminal. Browse its files in the separate **Remote** sidebar and save edits directly to the device. Local folders remain in **Files**.
-- Remote connections support passwords, private keys, SSH agents and common OpenSSH aliases. Host keys are verified; passwords and passphrases are never saved. Reconnect from the terminal after restarting to restore remote file tabs.
-- Remove installed extensions from their settings or by right-clicking their sidebar icons. Built-in extensions are protected, and **Reload Window** finishes unloading removed extensions.
-- Fixed slow saves incorrectly marking newer edits as saved. Text typed during disk or network writes remains unsaved until the next save.
-- Fixed invalid SSH port zero silently falling back to port 22.
+- Saved SSH devices appear in **Remote → Connections**. Reconnect with one click and enter any required password or passphrase in the terminal. Repeated clicks reuse the same connection terminal; restarting never signs in automatically.
+- Window controls now share the tab toolbar layout. Thin, themed dividers separate editor actions, extension actions and window controls. In narrow panes, secondary actions move into **More Actions** without clipping buttons.
+- Larger sidebar buttons and icons fit inside the original compact sidebar width.
+- The terminal panel has **Minimize**, which keeps sessions running, and **Close All**, which asks for confirmation before stopping terminals.
+- **Export PDF** appears only for `.md`, `.markdown`, `.txt`, `.text` and Markdown previews. Its menu opens below the title bar.
+- Fixed startup collapsing previously open panels. Restored panels keep their sidebar selection; fresh sessions start with tools closed.
 
-Verified with 52 backend/session tests, desktop SSH and extension-removal checks, native installer and automatic-update checks on Linux, Windows and both macOS architectures, and a ten-minute session stress test. Advanced SSH options and jump hosts use system OpenSSH without automatic file browsing; extensions continue to run locally.
+Verified with 64 backend/session tests, native desktop, SSH reconnect, extension-removal and recovery checks on Linux, Windows and both macOS architectures, installer and automatic-update checks, and a ten-minute session stress test.
 
 **Linux users upgrading from 0.1.0–0.1.3:** install the latest `.deb` manually once to migrate to the `singularity-editor` package name. Users on 0.1.4 or later can update normally.
 
