@@ -156,6 +156,7 @@ jobs:
               window.nativeShell = caches.find(value => typeof value?.mainPanel?.onDidChangeCurrent === 'function');
               window.nativeCommands = caches.find(value => Object.keys(value || {}).includes('_commands'));
             });
+            assert(await page.evaluate(() => !nativeShell.isExpanded('left') && !nativeShell.isExpanded('bottom')), 'A fresh session starts with tool panels closed');
             const files = '.plain-rail-tools [data-plain-action="files"]';
             if (await page.$eval(files, element => element.getAttribute('aria-pressed') !== 'true')) await page.click(files);
             const file = '#files .theia-TreeNode[title$=' + JSON.stringify(path.basename(filename)) + '] .theia-TreeNodeSegmentGrow';
@@ -244,8 +245,14 @@ jobs:
             await page.waitForSelector('.lm-Menu', { visible: true });
             assert(await page.evaluate(() => [...document.querySelectorAll('.lm-Menu')].some(menu => menu.innerText.includes('one action') && menu.innerText.includes('two action'))), 'Overflow keeps extension commands available');
             await page.screenshot({ path: path.join(artifact, 'narrow-toolbar.png') });
-            await page.click('body', { offset: { x: 80, y: 200 } });
+            await page.keyboard.press('Escape');
+            await page.evaluate(() => nativeShell.closeWidget(nativeShell.mainPanel.currentTitle.owner.id));
             await page.setViewport(bounds);
+            await page.evaluate(async () => {
+              const document = [...nativeShell.mainPanel.widgets()].find(widget => widget.title.label === "smoke & quote's document.txt");
+              await nativeShell.activateWidget(document.id);
+            });
+            await page.waitForFunction(() => nativeShell.mainPanel.currentTitle?.owner.title.label === "smoke & quote's document.txt");
             await page.waitForSelector('.plain-window-tabs [data-toolbar-owner="singularity.toolbar-two"]');
             await page.evaluate(() => nativeCommands.executeCommand('plain-editor.export-pdf', nativeShell.mainPanel.currentTitle.owner));
             const sourcePdf = path.join(project, "smoke & quote's document.pdf");
