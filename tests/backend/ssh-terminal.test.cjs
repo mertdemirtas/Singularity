@@ -81,3 +81,35 @@ test('local and remote navigator scopes keep file trees separate and preserve na
   scopedRoot(devices, true); assert.deepEqual(devices.children, [device]); assert.equal(devices.name, 'Remote'); assert.equal(device.visible, true); assert.equal(device.parent, devices);
   assert.equal(scopedRoot(undefined, false), undefined);
 });
+
+test('saved SSH arguments accept only a connection identifier', () => {
+  const { savedProfile } = require('../../extensions/plain-editor-ui/ssh-cli.cjs');
+  const id = require('node:crypto').randomUUID();
+  assert.deepEqual(savedProfile(['--singularity-profile', id]), { profileId: id });
+  for (const args of [['--singularity-profile'], ['--singularity-profile', 'host;command'], ['--singularity-profile', id, 'extra']]) assert.throws(() => savedProfile(args), /Invalid saved/);
+  assert.equal(savedProfile(['tester@host']), undefined);
+});
+
+test('a saved SSH connection reconnects with its original folder and identity without duplicating profiles', { timeout: 10000 }, async t => {
+  const device = await fixture(), store = new StateStore(path.join(device.directory, 'profiles.json'));
+  const connections = new SshConnections(store, { confirmHost: async () => true });
+  const saved = await connections.connect({ host: '127.0.0.1', port: device.port, username: 'tester', auth: 'password', folder: '~/project' }, { password: 'test-password' });
+  connections.disconnect(saved.id);
+  let opened, ready = false, socket, buffer = '', hostPrompt = false;
+  const bridge = new SshTerminalBridge(connections, { remoteConnected: async value => { opened = value; } });
+  t.after(async () => { socket?.destroy(); await bridge.dispose(); connections.dispose(); await device.close(); });
+  const details = await bridge.ready;
+  socket = net.connect(details.port, '127.0.0.1'); socket.setEncoding('utf8');
+  socket.on('data', data => { buffer += data; while (buffer.includes('\n')) {
+    const end = buffer.indexOf('\n'), frame = JSON.parse(buffer.slice(0, end)); buffer = buffer.slice(end + 1);
+    if (frame.type === 'prompt') { if (!frame.secret) hostPrompt = true; socket.write(JSON.stringify({ type: 'answer', id: frame.id, value: 'test-password' }) + '\n'); }
+    if (frame.type === 'ready') ready = true;
+    if (frame.type === 'error') assert.fail(frame.message);
+  } });
+  await new Promise(resolve => socket.once('connect', resolve));
+  socket.write(JSON.stringify({ type: 'start', token: details.token, input: { profileId: saved.id } }) + '\n');
+  const end = Date.now() + 8000; while ((!opened || !ready) && Date.now() < end) await pause(20);
+  assert(ready && opened); assert.equal(opened.id, saved.id); assert.equal(opened.folder, saved.folder); assert.equal(hostPrompt, false);
+  assert.equal((await connections.profiles()).length, 1);
+  assert(!JSON.stringify(await store.get('profiles')).includes('test-password'));
+});

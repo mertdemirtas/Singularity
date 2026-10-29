@@ -25,7 +25,7 @@ ssh() { command "$SINGULARITY_SSH_BIN/ssh" "$@"; }
 `, { mode: 0o600 });
     this.server = net.createServer(socket => this.accept(socket));
     await new Promise((resolve, reject) => { this.server.once('error', reject); this.server.listen(0, '127.0.0.1', resolve); });
-    return { directory: this.directory, port: this.server.address().port, token: this.token, zshDirectory };
+    return { directory: this.directory, port: this.server.address().port, token: this.token, zshDirectory, executable: process.execPath, cli: script, cwd: require('node:url').pathToFileURL(os.homedir()).href };
   }
   accept(socket) {
     if (this.disposed) { socket.destroy(); return; }
@@ -39,9 +39,13 @@ ssh() { command "$SINGULARITY_SSH_BIN/ssh" "$@"; }
     socket.on('close', () => { clearTimeout(timeout); this.sockets.delete(socket); channel?.close(); if (!channel && pendingId && !previouslyConnected) this.connections.disconnect(pendingId); for (const pending of answers.values()) pending.reject(Error('SSH terminal closed.')); answers.clear(); });
     socket.on('error', () => {});
     const connect = async frame => {
-      const input = frame.input || {}, profiles = await this.connections.profiles();
-      const existing = profiles.find(value => value.host === input.host && value.username === input.username && value.port === input.port);
-      const value = { ...input, id: existing?.id || randomUUID(), folder: '~', name: `${input.username}@${input.host}`, auth: input.keyPath ? 'key' : 'password' };
+      let input = frame.input || {};
+      const profiles = await this.connections.profiles();
+      const saved = input.profileId && profiles.find(value => value.id === input.profileId);
+      if (input.profileId && !saved) throw Error('This saved SSH connection no longer exists.');
+      if (saved) input = { ...saved, keyPaths: [], agent: saved.auth === 'agent' ? saved.agentSocket : false };
+      const existing = saved || profiles.find(value => value.host === input.host && value.username === input.username && value.port === input.port);
+      const value = { ...input, id: existing?.id || randomUUID(), folder: saved?.folder || '~', name: saved?.name || `${input.username}@${input.host}`, auth: input.keyPath ? 'key' : 'password' };
       pendingId = value.id; previouslyConnected = this.connections.sessions.has(value.id);
       let verifiedKey;
       const interactions = {

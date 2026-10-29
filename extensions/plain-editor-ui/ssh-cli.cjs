@@ -66,13 +66,20 @@ function prompt(message, secret) {
     process.stdin.on('data', data);
   });
 }
+function savedProfile(args) {
+  if (args[0] !== '--singularity-profile') return;
+  if (args.length !== 2 || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(args[1])) throw Error('Invalid saved SSH connection.');
+  return { profileId: args[1] };
+}
 async function main() {
-  let input = parse(process.argv.slice(2));
+  const args = process.argv.slice(2);
+  let input = savedProfile(args) || parse(args);
+  if (input?.profileId && (!process.env.SINGULARITY_SSH_PORT || !process.env.SINGULARITY_SSH_TOKEN)) throw Error('Saved SSH connections can only be opened inside Singularity.');
   if (!input || !process.env.SINGULARITY_SSH_PORT || !process.env.SINGULARITY_SSH_TOKEN) {
     if (!input && process.env.SINGULARITY_SSH_PORT && process.argv.length > 2) console.error('Using system SSH for these options; automatic remote files are not attached.');
     system(process.argv.slice(2)); return;
   }
-  input = configured(input); if (!input) { console.error('Using system SSH for this configuration; automatic remote files require a direct SSH connection.'); system(process.argv.slice(2)); return; }
+  input = input.profileId ? input : configured(input); if (!input) { console.error('Using system SSH for this configuration; automatic remote files require a direct SSH connection.'); system(process.argv.slice(2)); return; }
   const socket = net.connect(Number(process.env.SINGULARITY_SSH_PORT), '127.0.0.1'); socket.setEncoding('utf8');
   const send = value => socket.write(JSON.stringify(value) + '\n');
   let buffer = '', streaming = false, finished = false;
@@ -96,4 +103,4 @@ async function main() {
   socket.on('close', () => { cleanup(); if (!finished) process.exitCode = 1; });
 }
 if (require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });
-module.exports = { parse, configured };
+module.exports = { parse, configured, savedProfile };

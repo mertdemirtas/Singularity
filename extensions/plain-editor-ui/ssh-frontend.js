@@ -26,7 +26,7 @@ module.exports = bind => {
     const shell = () => container.get(ApplicationShell), workspace = () => container.get(WorkspaceService), editors = () => container.get(EditorManager);
     const factory = new RemoteFileSystemProxyFactory(), changes = new Emitter();
     const server = WebSocketConnectionProvider.createProxy(container, SSH_PATH, factory);
-    const pendingEditors = new Map();
+    const pendingEditors = new Map(), reconnectTerminals = new Map(), reconnectRequests = new Map();
     const storage = () => container.get(WorkspaceStorageService);
     const savePending = () => storage().setData('singularity.ssh.pendingEditors', [...pendingEditors]);
     const controller = {
@@ -52,6 +52,26 @@ module.exports = bind => {
           pendingEditors.delete(address);
           await savePending();
         }
+      },
+      reconnect(value) {
+        if (value.connected) return this.openFolder(value);
+        if (reconnectRequests.has(value.id)) return reconnectRequests.get(value.id);
+        const task = (async () => {
+          const { TerminalService } = require('@theia/terminal/lib/browser/base/terminal-service');
+          const terminals = container.get(TerminalService), existing = reconnectTerminals.get(value.id);
+          if (existing && !existing.isDisposed && !existing.exitStatus) { await terminals.open(existing); return; }
+          if (existing && !existing.isDisposed) await shell().closeWidget(existing.id);
+          const details = await server.terminalEnvironment();
+          const terminal = await terminals.newTerminal({ title: `SSH: ${value.name}`, useServerTitle: false, kind: 'user', isTransient: true, cwd: new URI(details.cwd),
+            shellPath: details.executable, shellArgs: [details.cli, '--singularity-profile', value.id] });
+          reconnectTerminals.set(value.id, terminal);
+          terminal.disposed.connect(() => { if (reconnectTerminals.get(value.id) === terminal) reconnectTerminals.delete(value.id); });
+          try { await terminal.start(); await terminals.open(terminal); }
+          catch (error) { terminal.dispose(); throw error; }
+        })();
+        reconnectRequests.set(value.id, task);
+        task.finally(() => reconnectRequests.delete(value.id)).catch(() => {});
+        return task;
       },
       checkDirty(id) {
         if (editors().all.some(widget => widget.editor.uri.scheme === 'ssh' && widget.editor.uri.authority === id && widget.saveable?.dirty)) throw Error('Save or close unsaved remote files before disconnecting or forgetting this connection.');

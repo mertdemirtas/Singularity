@@ -571,3 +571,13 @@ body.plain-git-fullscreen-active :is(#plain-header,#plain-titlebar,#plain-app-na
 .plain-extension-settings-footer [role=alert]{color:var(--theia-errorForeground)}
 #plain-extension-settings .plain-extension-remove,#plain-extension-view-context .plain-extension-remove{color:var(--theia-errorForeground,#d32f2f)}
 #plain-extension-settings .plain-extension-remove{margin:0;border:1px solid currentColor;background:transparent}
+
+.plain-remote-connections{padding:8px;border-bottom:1px solid var(--plain-divider-color)}
+.plain-remote-connections h3{margin:4px 6px 8px;font-size:12px;font-weight:600;color:var(--theia-descriptionForeground)}
+.plain-remote-connect{box-sizing:border-box;display:flex;align-items:center;gap:10px;width:100%;min-height:48px;margin:2px 0;padding:8px;border:0;border-radius:6px;background:transparent;color:var(--theia-foreground);text-align:left;font:inherit;cursor:pointer}
+.plain-remote-connect:hover{background:var(--theia-list-hoverBackground)}
+.plain-remote-connect:focus-visible{outline:2px solid var(--theia-focusBorder);outline-offset:-2px}
+.plain-remote-host{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plain-remote-host small{display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;color:var(--theia-descriptionForeground);font-size:11px}
+.plain-remote-status{flex:none;color:var(--theia-textLink-foreground);font-size:11px}
+.plain-remote-help{padding:8px 16px;color:var(--theia-descriptionForeground)}

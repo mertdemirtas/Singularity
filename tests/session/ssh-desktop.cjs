@@ -112,9 +112,24 @@ async function close() {
   await page.$eval('.plain-rail-tools [data-plain-action="remote"]', node => node.click());
   await page.waitForFunction(() => document.querySelector('#singularity-remote')?.innerText.includes('offline'));
   console.log('Remote workspace restored offline without a sign-in dialog');
-  await connect(false);
+  await page.waitForSelector('#singularity-remote [data-ssh-connect]', { visible: true });
+  const beforeReconnect = await page.evaluate(() => [...sshTestShell.bottomPanel.widgets()].filter(widget => widget.kind === 'user').length);
+  await page.$eval('#singularity-remote [data-ssh-connect]', node => { node.click(); node.click(); });
+  await page.waitForFunction(() => [...sshTestShell.bottomPanel.widgets()].some(widget => widget.title.label.startsWith('SSH: ')));
+  await page.evaluate(async () => { window.sshTestTerminal = [...sshTestShell.bottomPanel.widgets()].find(widget => widget.title.label.startsWith('SSH: ')); await sshTestTerminal.waitForConnection?.promise; });
+  await until(() => outputContains('password:'), 'saved connection terminal password prompt');
+  assert(!await outputContains('Trust this host'), 'Saved host key must not ask to trust the same device again');
+  await type('test-password\r');
+  await until(() => outputContains('TEST SSH READY'), 'one-click saved reconnect');
+  assert.equal(await page.evaluate(() => [...sshTestShell.bottomPanel.widgets()].filter(widget => widget.kind === 'user').length), beforeReconnect + 1, 'Repeated clicks reuse the pending connection terminal');
+  await page.screenshot({ path: path.join(directory, 'saved-connections.png') });
   await page.waitForFunction(() => [...sshTestShell.mainPanel.widgets()].some(widget => widget.editor?.uri.scheme === 'ssh' && widget.editor.document.getText() === 'saved from Singularity over SSH 🪐\n'));
-  await close(); console.log('PASS: separate local/remote sections, normal ssh command, terminal sign-in, remote tree, Ctrl+S, SSH shell and restart/reconnect');
+  await close();
+  await launch();
+  await page.waitForSelector('#singularity-remote [data-ssh-connect]', { visible: true });
+  assert(await page.evaluate(() => ![...sshTestShell.bottomPanel.widgets()].some(widget => widget.title.label.startsWith('SSH: '))), 'A saved reconnect terminal must not restart authentication automatically');
+  assert(await page.$eval('#singularity-remote [data-ssh-connect] .plain-remote-status', node => node.textContent === 'Connect'), 'Saved devices stay offline until explicitly connected');
+  await close(); console.log('PASS: local/remote sections, normal ssh, terminal sign-in, Ctrl+S, recovery, one-click saved reconnect and no automatic authentication after restart');
 })().catch(async error => {
   console.error(error.stack); process.exitCode = 1;
   if (page) { console.error(await page.evaluate(() => document.body.innerText).catch(() => 'closed')); await page.screenshot({ path: path.join(directory, 'failure.png') }).catch(() => {}); }
