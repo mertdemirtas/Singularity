@@ -29,6 +29,8 @@ The **Export PDF** button appears in the tab toolbar only for `.md`, `.markdown`
 
 On startup, Singularity restores your open tabs before showing the workspace. Closed tools stay closed; an empty session shows Welcome. Your last theme and font are used for the loading screen, and the selected font also applies to the terminal and extension UI.
 
+The terminal pane has **Minimize** (keeps sessions running) and **Close All** controls.
+
 Drag sidebar icons to reorder them. Right-click an icon to hide it, or right-click empty sidebar space to restore icons and reset the layout.
 
 To choose a GitHub repository, use **Files → Open → Clone Repository** and select GitHub. The GitHub Pull Requests extension shows pull requests and issues for the repository folder you have open. Its optional Copilot chat attachments are unavailable in Singularity.

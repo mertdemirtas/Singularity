@@ -572,6 +572,11 @@ body.plain-git-fullscreen-active :is(#plain-header,#plain-titlebar,#plain-app-na
 #plain-extension-settings .plain-extension-remove,#plain-extension-view-context .plain-extension-remove{color:var(--theia-errorForeground,#d32f2f)}
 #plain-extension-settings .plain-extension-remove{margin:0;border:1px solid currentColor;background:transparent}
 
+body.plain-editor-ready #theia-bottom-content-panel .lm-TabBar-toolbar{box-sizing:border-box;align-items:center;padding:4px 6px;gap:4px}
+body.plain-editor-ready #theia-bottom-content-panel .lm-TabBar-toolbar .item{margin:0 2px}
+body.plain-editor-ready #theia-bottom-content-panel .lm-TabBar-tab{margin:4px 2px;padding-inline:8px}
+body.plain-editor-ready #theia-bottom-content-panel .lm-TabBar-tab.lm-mod-current{box-shadow:inset 0 -2px var(--theia-focusBorder)}
+
 .plain-remote-connections{padding:8px;border-bottom:1px solid var(--plain-divider-color)}
 .plain-remote-connections h3{margin:4px 6px 8px;font-size:12px;font-weight:600;color:var(--theia-descriptionForeground)}
 .plain-remote-connect{box-sizing:border-box;display:flex;align-items:center;gap:10px;width:100%;min-height:48px;margin:2px 0;padding:8px;border:0;border-radius:6px;background:transparent;color:var(--theia-foreground);text-align:left;font:inherit;cursor:pointer}

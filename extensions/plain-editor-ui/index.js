@@ -209,6 +209,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
   require('./ssh-frontend')(bind);
   require('./git-tools')(bind);
   require('./pdf-export')(bind);
+  require('./terminal-panel')(bind);
   bind(PreferenceContribution).toConstantValue({ schema: {
     type: 'object', properties: {
       [SIDEBAR_VISIBLE]: { type: 'boolean', default: true, description: 'Show the sidebar and its open side pane.' },
