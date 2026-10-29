@@ -25,7 +25,7 @@ A simple desktop text editor for notes and code, available on Linux, Windows, an
 
 Auto-save is enabled when you switch away from the app. Use **Save As** to name a new file or keep a **Recovered** document.
 
-Use **Export PDF** in the tab toolbar to export Markdown, text, or code. In Markdown previews it sits beside **Show Source** and exports the rendered document. PDFs use white pages regardless of the app theme. Right-click the button and choose **Export Dark PDF** for a fixed dark palette, saved as `filename-dark.pdf`. Exports include unsaved edits and go to the project folder; without a project, choose a folder when prompted. Existing PDFs require confirmation before replacement. Text and code exports support files up to 20 MB.
+The **Export PDF** button appears in the tab toolbar only for `.md`, `.markdown`, `.txt`, and `.text` files, plus Markdown previews. It stays hidden for code and other file types. In Markdown previews it sits beside **Show Source** and exports the rendered document. PDFs use white pages regardless of the app theme. Right-click the button and choose **Export Dark PDF** for a fixed dark palette, saved as `filename-dark.pdf`. Exports include unsaved edits and go to the project folder; without a project, choose a folder when prompted. Existing PDFs require confirmation before replacement. Plain-text exports support files up to 20 MB.
 
 On startup, Singularity restores your open tabs before showing the workspace. Closed tools stay closed; an empty session shows Welcome. Your last theme and font are used for the loading screen, and the selected font also applies to the terminal and extension UI.
 

@@ -14,11 +14,7 @@ const URI = require('@theia/core/lib/common/uri').default;
 const COMMAND = { id: 'plain-editor.export-pdf', label: 'Export PDF', category: 'File', iconClass: 'codicon codicon-file-pdf' };
 const DARK_COMMAND = { id: 'plain-editor.export-dark-pdf', label: 'Export Dark PDF', category: 'File' };
 const EXPORT_MENU = ['plain-editor-pdf-export'];
-const markdownPreview = widget => ['markdown.preview', 'vscode.markdown.preview.editor'].includes(widget?.viewType);
-const textModel = widget => {
-  const model = widget?.editor?.getControl?.()?.getModel?.();
-  return typeof model?.getValue === 'function' ? model : undefined;
-};
+const { markdownPreview, textModel, exportFormat } = require('./pdf-file-types.cjs');
 
 async function openMarkdownPreview(shell, registry, resource) {
   await registry.executeCommand('markdown.showPreview', resource.codeUri);
@@ -44,9 +40,10 @@ async function openMarkdownPreview(shell, registry, resource) {
 module.exports = bind => {
   let busy = false;
   const changed = new Emitter();
-  const visible = widget => Boolean(window.plainEditorDesktop?.exportPdf && (markdownPreview(widget) || textModel(widget)));
+  const visible = widget => Boolean(window.plainEditorDesktop?.exportPdf && exportFormat(widget));
   bind(CommandContribution).toDynamicValue(({ container }) => ({ registerCommands(registry) {
     const handler = theme => ({
+      isVisible: widget => visible(widget || container.get(ApplicationShell).currentWidget),
       isEnabled: widget => !busy && visible(widget || container.get(ApplicationShell).currentWidget),
       execute: async widget => {
         widget ||= container.get(ApplicationShell).currentWidget;
@@ -56,7 +53,7 @@ module.exports = bind => {
         try {
           progress = await container.get(MessageService).showProgress({ text: 'Exporting PDF…' });
           // Markdown source exports the rendered preview, including unsaved edits.
-          if (!markdownPreview(widget) && ['.md', '.markdown'].includes(widget.editor.uri.path.ext.toLowerCase())) {
+          if (!markdownPreview(widget) && exportFormat(widget) === 'markdown') {
             widget = await openMarkdownPreview(container.get(ApplicationShell), registry, widget.editor.uri);
             await widget.ready.promise;
           }
@@ -86,8 +83,9 @@ module.exports = bind => {
         const enabled = commands.isEnabled(COMMAND.id, widget);
         const showMenu = event => {
           event.preventDefault(); event.stopPropagation();
-          const anchor = event.type === 'contextmenu' ? { x: event.clientX, y: event.clientY }
-            : { x: event.currentTarget.getBoundingClientRect().left, y: event.currentTarget.getBoundingClientRect().bottom };
+          const button = event.currentTarget.getBoundingClientRect();
+          const row = event.currentTarget.closest('.theia-tabBar-tab-row')?.getBoundingClientRect();
+          const anchor = { x: button.left, y: (row?.bottom || button.bottom) + 4 };
           container.get(ContextMenuRenderer).render({ menuPath: EXPORT_MENU, anchor, args: [widget], context: event.currentTarget, includeAnchorArg: false });
         };
         const exportPdf = () => { if (enabled) commands.executeCommand(COMMAND.id, widget); };
