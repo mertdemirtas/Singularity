@@ -143,13 +143,13 @@ body.plain-editor-ready #theia-main-content-panel .theia-tabBar-tab-row{-webkit-
 body.plain-editor-ready #theia-main-content-panel .lm-TabBar-content-container{-webkit-app-region:drag}
 body.plain-editor-ready #theia-main-content-panel .lm-TabBar-tab,body.plain-editor-ready #theia-main-content-panel .lm-TabBar-toolbar,body.plain-editor-ready #theia-main-content-panel .lm-TabBar-toolbar *,body.plain-editor-ready #theia-main-content-panel .theia-tabBar-open-tabs{-webkit-app-region:no-drag}
 body.plain-editor-ready #theia-main-content-panel .plain-window-tabs .theia-tabBar-tab-row{box-sizing:border-box;padding-right:var(--plain-window-space)}
-#plain-header{position:fixed;inset:40px auto 0 0;width:48px;height:auto;display:flex;flex-direction:column;gap:8px;align-items:center;padding:12px 6px 8px;border:0;-webkit-app-region:no-drag;user-select:none;overflow:visible}
+#plain-header{position:fixed;inset:40px auto 0 0;width:48px;height:auto;display:flex;flex-direction:column;gap:8px;align-items:center;padding:12px 2px 8px;border:0;-webkit-app-region:no-drag;user-select:none;overflow:visible}
 #plain-header .plain-rail-tools,#plain-header .plain-rail-footer{display:flex;flex-direction:column;align-items:center;gap:4px}
-#plain-header .plain-rail-tools{align-self:stretch;flex:1;min-height:0;margin:0 -6px;padding:0 6px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+#plain-header .plain-rail-tools{align-self:stretch;flex:1;min-height:0;margin:0 -2px;padding:0 2px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
 #plain-header .plain-rail-footer{flex:none;margin-top:auto}
 #plain-header .plain-rail-tools>.plain-button{flex:none}
 #plain-header .plain-rail-tools .plain-button:focus-visible{outline-offset:-2px}
-.plain-rail-item{position:relative;flex:none;width:34px;height:34px}
+.plain-rail-item{position:relative;flex:none;width:44px;height:44px}
 .plain-rail-item[hidden]{display:none!important}
 .plain-rail-item.plain-dragging{opacity:.4}
 .plain-rail-item.plain-drop-before::before,.plain-rail-item.plain-drop-after::after{content:'';position:absolute;left:0;right:0;border-top:2px solid var(--theia-focusBorder);pointer-events:none}
@@ -167,7 +167,7 @@ body.plain-editor-ready #theia-main-content-panel .plain-window-tabs .theia-tabB
 .plain-button[hidden]{display:none!important}
 .plain-button:focus-visible{outline:2px solid var(--theia-focusBorder);outline-offset:1px}
 #plain-header .plain-button{width:34px;height:34px;padding:0;border-radius:8px}
-#plain-header .plain-button svg{width:18px;height:18px}
+#plain-header .plain-button svg{width:22px;height:22px}
 #plain-titlebar{position:fixed;z-index:110;top:0;left:48px;right:0;height:40px;display:flex;align-items:center;pointer-events:none;color:var(--theia-foreground);font:13px var(--theia-ui-font-family);transform:translateZ(0);isolation:isolate}
 #plain-titlebar[popover]{bottom:auto;width:auto;margin:0;padding:0;border:0;background:transparent;overflow:visible}
 #plain-titlebar::backdrop{display:none}
@@ -266,7 +266,7 @@ body.plain-editor-ready #theia-app-shell{background:var(--theia-editor-backgroun
 #plain-header{background:var(--plain-chrome-background);color:var(--plain-chrome-muted)}
 #plain-header .plain-rail-tools,#plain-header .plain-rail-footer{gap:9px}
 #plain-header .plain-rail-footer{padding-top:12px;border-top:1px solid var(--theia-activityBar-border,var(--theia-panel-border))}
-#plain-header .plain-button{width:36px;height:36px;border-radius:12px;color:var(--plain-chrome-muted);transition:background .12s,color .12s}
+#plain-header .plain-button{box-sizing:border-box;width:44px;height:44px;border-radius:12px;color:var(--plain-chrome-muted);transition:background .12s,color .12s}
 #plain-header .plain-button:hover,#plain-header .plain-button[aria-expanded='true']{background:var(--plain-chrome-hover);color:var(--plain-chrome-foreground)}
 #plain-header .plain-button[aria-pressed='true']{background:var(--plain-chrome-selected);color:var(--plain-chrome-foreground)}
 #plain-app-navigation{position:fixed;top:0;left:0;bottom:auto;right:auto;box-sizing:border-box;width:112px;height:40px;margin:0;padding:4px 5px;display:flex;gap:3px;align-items:center;border:0;background:var(--plain-title-background);color:var(--plain-title-foreground);overflow:visible;-webkit-app-region:drag}
@@ -577,6 +577,7 @@ body.plain-editor-ready #theia-bottom-content-panel .lm-TabBar-toolbar .item{mar
 body.plain-editor-ready #theia-bottom-content-panel .lm-TabBar-tab{margin:4px 2px;padding-inline:8px}
 body.plain-editor-ready #theia-bottom-content-panel .lm-TabBar-tab.lm-mod-current{box-shadow:inset 0 -2px var(--theia-focusBorder)}
 
+#plain-header .plain-view-icon{width:22px;height:22px;line-height:22px;font-size:22px}
 .plain-remote-connections{padding:8px;border-bottom:1px solid var(--plain-divider-color)}
 .plain-remote-connections h3{margin:4px 6px 8px;font-size:12px;font-weight:600;color:var(--theia-descriptionForeground)}
 .plain-remote-connect{box-sizing:border-box;display:flex;align-items:center;gap:10px;width:100%;min-height:48px;margin:2px 0;padding:8px;border:0;border-radius:6px;background:transparent;color:var(--theia-foreground);text-align:left;font:inherit;cursor:pointer}
