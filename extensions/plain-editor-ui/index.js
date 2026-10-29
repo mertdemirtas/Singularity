@@ -321,6 +321,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
     let chrome;
     let settings;
     let recoveryReady = false;
+    let freshLayout = false;
     let updateState;
     let updateDialog;
     let notifiedVersion;
@@ -719,6 +720,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
       }
     };
     return {
+      initializeLayout() { freshLayout = true; },
       onStart() {
         this.releaseStartupInput = require('./session-restoration').guardStartupInput();
         require('./startup')(container);
@@ -776,7 +778,13 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
         // through the shell's layout padding, keeping pane resizing accurate.
         shell.statusBar.hide();
         shell.topPanel.hide();
-        for (const area of ['left', 'right', 'bottom']) shell.collapsePanel(area);
+        if (freshLayout) {
+          for (const area of ['left', 'right', 'bottom']) await shell.collapsePanel(area);
+        } else if (shell.isExpanded('left')) {
+          // Keep the restored pane and rail selection in sync before reveal.
+          pinnedSide = shell.leftPanelHandler.tabBar.currentTitle?.owner.id || '';
+          lastSide = pinnedSide;
+        }
         // Hide the activity strip and remove collapsed panes from Lumino's layout.
         for (const handler of [shell.leftPanelHandler, shell.rightPanelHandler]) {
           handler.container.layout.widgets.find(widget => widget.hasClass('theia-app-sidebar-container'))?.hide();

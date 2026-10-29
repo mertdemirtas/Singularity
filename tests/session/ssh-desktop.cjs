@@ -109,7 +109,8 @@ async function close() {
   await type('echo SSH_TERMINAL_TEST\r'); await until(() => device.shellInput.join('').includes('SSH_TERMINAL_TEST'), 'terminal input reaches remote SSH shell');
   await page.screenshot({ path: path.join(directory, 'remote-editor.png') }); await close();
   await launch();
-  await page.$eval('.plain-rail-tools [data-plain-action="remote"]', node => node.click());
+  assert(await page.evaluate(() => sshTestShell.isExpanded('left')), 'The previously open Remote pane must be restored before revealing the app');
+  assert(await page.$eval('.plain-rail-tools [data-plain-action="remote"]', node => node.getAttribute('aria-pressed') === 'true'), 'The restored Remote pane must retain its selected sidebar button');
   await page.waitForFunction(() => document.querySelector('#singularity-remote')?.innerText.includes('offline'));
   console.log('Remote workspace restored offline without a sign-in dialog');
   await page.waitForSelector('#singularity-remote [data-ssh-connect]', { visible: true });
