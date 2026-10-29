@@ -98,6 +98,14 @@ jobs:
           const project = path.join(temp, 'Project With Spaces');
           const config = path.join(temp, 'config');
           fs.mkdirSync(project); fs.mkdirSync(config);
+          for (const name of ['one', 'two']) {
+            const extension = path.join(config, 'deployedPlugins', `singularity.toolbar-${name}@0.0.1`, 'extension');
+            fs.mkdirSync(extension, { recursive: true });
+            fs.writeFileSync(path.join(extension, '../extension.vsixmanifest'), '<PackageManifest/>');
+            const commands = [1, 2].map(number => ({ command: `fixture.${name}.${number}`, title: `${name} action ${number}`, icon: '$(beaker)' }));
+            fs.writeFileSync(path.join(extension, 'package.json'), JSON.stringify({ name: 'toolbar-' + name, publisher: 'singularity', version: '0.0.1', engines: { vscode: '^1.85.0' }, main: 'extension.cjs', activationEvents: ['*'], contributes: { commands, menus: { 'editor/title': commands.map(command => ({ command: command.command, when: 'resourceExtname == .txt', group: 'navigation' })) } } }));
+            fs.writeFileSync(path.join(extension, 'extension.cjs'), `exports.activate=()=>{const v=require('vscode');for(const n of [1,2])v.commands.registerCommand('fixture.${name}.'+n,()=>{});};`);
+          }
           const filename = path.join(project, "smoke & quote's file.py");
           fs.writeFileSync(filename, "print('SINGULARITY_PYTHON_OK')\n");
           fs.writeFileSync(path.join(config, 'settings.json'), JSON.stringify({
@@ -138,6 +146,11 @@ jobs:
             const fonts = await page.evaluate(() => window.plainEditorDesktop.fontFamilies());
             assert(Array.isArray(fonts) && fonts.length > 0);
             console.log(`Font discovery returned ${fonts.length} families.`);
+            assert(await page.evaluate(() => {
+              const rail = document.getElementById('plain-header').getBoundingClientRect();
+              const buttons = [...document.querySelectorAll('#plain-header .plain-button')].map(button => button.getBoundingClientRect()).filter(box => box.width);
+              return rail.width === 48 && buttons.length > 0 && buttons.every(box => box.width === 44 && box.height === 44 && box.left >= rail.left && box.right <= rail.right);
+            }), 'Larger sidebar buttons must fit inside the original 48px rail');
             await page.evaluate(() => {
               const caches = [...theia.container._bindingDictionary._map.values()].flat().map(binding => binding.cache);
               window.nativeShell = caches.find(value => typeof value?.mainPanel?.onDidChangeCurrent === 'function');
@@ -174,10 +187,68 @@ jobs:
               const text = Array.from({ length: buffer.length }, (_, index) => buffer.getLine(index)?.translateToString()).join('\n');
               return text.includes('SINGULARITY_PYTHON_OK');
             }, { timeout: 60000, polling: 100 });
-            // Exercise both Chromium printing paths on each native platform.
-            // Explicit widgets keep terminal focus from changing the source.
+            // Minimize keeps sessions alive; Close All supports cancellation.
+            await page.evaluate(() => nativeCommands.executeCommand('terminal:new'));
+            await page.waitForSelector('[id="plain-editor.terminal-minimize"]', { visible: true });
+            const terminalIds = await page.evaluate(() => [...nativeShell.bottomPanel.widgets()].filter(widget => widget.kind).map(widget => widget.id));
+            assert(terminalIds.length >= 2);
+            await page.screenshot({ path: path.join(artifact, 'terminal-panel.png') });
+            assert(await page.evaluate(() => {
+              const close = document.getElementById('plain-editor.terminal-close-all').getBoundingClientRect();
+              const minimize = document.getElementById('plain-editor.terminal-minimize').getBoundingClientRect();
+              return close.left > minimize.left;
+            }), 'Close All belongs at the top-right of the terminal controls');
+            await page.click('[id="plain-editor.terminal-minimize"]');
+            await page.waitForFunction(() => !nativeShell.isExpanded('bottom'));
+            assert(await page.evaluate(ids => ids.every(id => !nativeShell.getWidgetById(id).isDisposed), terminalIds));
+            await page.click('[data-plain-action="terminal"]');
+            await page.waitForSelector('[id="plain-editor.terminal-close-all"]', { visible: true });
+            await page.click('[id="plain-editor.terminal-close-all"]');
+            await page.waitForSelector('.dialogOverlay', { visible: true });
+            await page.evaluate(() => [...document.querySelectorAll('.dialogOverlay button')].find(button => button.textContent === 'Cancel').click());
+            assert(await page.evaluate(ids => ids.every(id => !nativeShell.getWidgetById(id).isDisposed), terminalIds));
+            await page.click('[id="plain-editor.terminal-close-all"]');
+            await page.waitForSelector('.dialogOverlay', { visible: true });
+            await page.evaluate(() => [...document.querySelectorAll('.dialogOverlay button')].find(button => button.textContent === 'Close all').click());
+            await page.waitForFunction(() => ![...nativeShell.bottomPanel.widgets()].some(widget => widget.kind) && !nativeShell.isExpanded('bottom'));
+            console.log('Terminal minimize, restore, cancel and Close All passed.');
+            for (const [name, supported] of [['code.py', false], ['notes.text', true], ['main.c', false], ['notes.MARKDOWN', true], ["smoke & quote's document.txt", true]]) {
+              const document = path.join(project, name); fs.writeFileSync(document, 'Document for PDF export\n');
+              await page.evaluate(uri => nativeCommands.executeCommand('vscode.open', uri), pathToFileURL(document).href);
+              await page.waitForFunction(name => nativeShell.mainPanel.currentTitle?.owner.title.label === name, {}, name);
+              await page.waitForSelector('[id="plain-editor.export-pdf"]', supported ? { visible: true } : { hidden: true });
+              assert.equal(await page.evaluate(() => nativeCommands.isEnabled('plain-editor.export-pdf', nativeShell.mainPanel.currentTitle.owner)), supported);
+              assert.equal(await page.evaluate(() => nativeCommands.isVisible('plain-editor.export-dark-pdf', nativeShell.mainPanel.currentTitle.owner)), supported);
+            }
+            await page.waitForSelector('[data-toolbar-owner="singularity.toolbar-two"]');
+            assert(await page.evaluate(() => {
+              const toolbar = document.querySelector('.plain-window-tabs .lm-TabBar-toolbar');
+              const owners = [...toolbar.querySelectorAll('[data-toolbar-owner]')].map(item => item.dataset.toolbarOwner);
+              const groups = owners.filter((owner, index) => index === 0 || owner !== owners[index - 1]);
+              return groups.length === new Set(groups).size && groups.includes('singularity.toolbar-one') && groups.includes('singularity.toolbar-two') && toolbar.querySelectorAll('.plain-toolbar-separator').length === groups.length - 1;
+            }), 'Extensions must have contiguous groups with thin separators');
+            // A narrow split pane must show whole buttons or move them to More.
+            const bounds = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
+            await page.evaluate(() => nativeCommands.executeCommand('plain-editor.split-right', nativeShell.mainPanel.currentTitle.owner));
+            await page.setViewport({ width: 700, height: 760 });
+            await page.waitForSelector('.plain-window-tabs [id="__more__"]', { visible: true });
+            await page.waitForFunction(() => {
+              const row = document.querySelector('.plain-window-tabs .theia-tabBar-tab-row'), rect = row.getBoundingClientRect();
+              const controls = document.getElementById('plain-titlebar').getBoundingClientRect();
+              return [...row.querySelectorAll('.lm-TabBar-toolbar .item')].every(item => {
+                const box = item.getBoundingClientRect(); return box.left >= rect.left && box.right <= controls.left;
+              });
+            });
+            assert(await page.$('.plain-window-tabs [id="plain-editor.new-file"]'), 'New file stays available in narrow panes');
+            await page.click('.plain-window-tabs [id="__more__"]');
+            await page.waitForSelector('.lm-Menu', { visible: true });
+            assert(await page.evaluate(() => [...document.querySelectorAll('.lm-Menu')].some(menu => menu.innerText.includes('one action') && menu.innerText.includes('two action'))), 'Overflow keeps extension commands available');
+            await page.screenshot({ path: path.join(artifact, 'narrow-toolbar.png') });
+            await page.click('body', { offset: { x: 80, y: 200 } });
+            await page.setViewport(bounds);
+            await page.waitForSelector('.plain-window-tabs [data-toolbar-owner="singularity.toolbar-two"]');
             await page.evaluate(() => nativeCommands.executeCommand('plain-editor.export-pdf', nativeShell.mainPanel.currentTitle.owner));
-            const sourcePdf = path.join(project, "smoke & quote's file.pdf");
+            const sourcePdf = path.join(project, "smoke & quote's document.pdf");
             assert.equal(fs.readFileSync(sourcePdf).subarray(0, 5).toString(), '%PDF-');
             const markdown = path.join(project, 'preview.md');
             fs.writeFileSync(markdown, '# Native PDF export\n\n**Rendered Markdown**, a link, and a table.\n\n[Link](https://example.com)\n\n| One | Two |\n| --- | --- |\n| A | B |\n');
@@ -185,7 +256,30 @@ jobs:
             await page.waitForFunction(() => nativeShell.mainPanel.currentTitle?.owner.title.label === 'preview.md');
             await page.evaluate(() => nativeCommands.executeCommand('plain-editor.export-pdf', nativeShell.mainPanel.currentTitle.owner));
             assert.equal(fs.readFileSync(path.join(project, 'preview.pdf')).subarray(0, 5).toString(), '%PDF-');
-            console.log('Native source and rendered Markdown PDF exports passed.');
+            console.log('Native text and rendered Markdown PDF exports and format visibility passed.');
+            await page.waitForSelector('#plain-titlebar.plain-inline-titlebar');
+            const controls = await page.evaluate(() => {
+              const title = document.getElementById('plain-titlebar'), row = title.parentElement, rect = row.getBoundingClientRect();
+              const toolbar = row.querySelector('.lm-TabBar-toolbar')?.getBoundingClientRect();
+              return {
+                sameRow: row.classList.contains('theia-tabBar-tab-row') && !title.hasAttribute('popover'),
+                overlaps: toolbar && toolbar.right > title.getBoundingClientRect().left + 1,
+                buttons: [...title.querySelectorAll('.plain-window-controls button')].map(button => {
+                  const box = button.getBoundingClientRect(), hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+                  return { centered: Math.abs(box.y + box.height / 2 - (rect.y + rect.height / 2)) < 1.5, reachable: button === hit || button.contains(hit) };
+                })
+              };
+            });
+            assert(controls.sameRow && !controls.overlaps && controls.buttons.every(button => button.centered && button.reachable), JSON.stringify(controls));
+            await page.click('[id="plain-editor.export-pdf"]', { button: 'right' });
+            await page.waitForSelector('.lm-Menu', { visible: true });
+            assert(await page.evaluate(() => {
+              const row = document.getElementById('plain-titlebar').parentElement.getBoundingClientRect();
+              return [...document.querySelectorAll('.lm-Menu')].filter(menu => menu.getBoundingClientRect().width).every(menu => menu.getBoundingClientRect().top >= row.bottom);
+            }), 'PDF menu must stay below the title row');
+            await page.screenshot({ path: path.join(artifact, 'toolbar-menu.png') });
+            await page.keyboard.press('Escape');
+            await page.click('body', { offset: { x: 80, y: 200 } });
             // Tall rendered headings expose competing caret/viewport scrolling.
             await page.evaluate(uri => nativeCommands.executeCommand('vscode.open', uri), pathToFileURL(markdown).href);
             await page.evaluate(async () => {

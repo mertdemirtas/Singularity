@@ -46,7 +46,7 @@ body.plain-editor-ready #theia-main-content-panel .lm-TabBar .lm-TabBar-tab .lm-
 body.plain-editor-ready #theia-main-content-panel .lm-TabBar.theia-app-main .lm-TabBar-content-container{flex:1 1 auto;min-width:0}
 body.plain-editor-ready #theia-main-content-panel .lm-TabBar.theia-app-main .lm-TabBar-content{width:max-content}
 body.plain-editor-ready #theia-main-content-panel .lm-TabBar.theia-app-main .tab-toolbar{margin-left:auto}
-body.plain-editor-ready #theia-main-content-panel .lm-TabBar-toolbar{box-sizing:border-box;padding-block:4px;gap:0}
+body.plain-editor-ready #theia-main-content-panel .lm-TabBar-toolbar{box-sizing:border-box;flex:0 0 auto;min-width:max-content;padding-block:4px;gap:0}
 body.plain-editor-ready #theia-main-content-panel .lm-TabBar-toolbar .item{margin:0 4px}
 body.plain-editor-ready .theia-open-editors-widget .open-editors-node-row:not(.group-node):not(.area-node)>.theia-TreeNode{padding-left:6px!important}
 body.plain-editor-ready .theia-open-editors-widget .open-editors-node-row:not(.group-node):not(.area-node) .theia-TreeNodeContent{display:flex;align-items:center;min-width:0}
@@ -142,7 +142,7 @@ body.plain-editor-ready #theia-main-content-panel .lm-TabBar.theia-app-main{back
 body.plain-editor-ready #theia-main-content-panel .theia-tabBar-tab-row{-webkit-app-region:drag}
 body.plain-editor-ready #theia-main-content-panel .lm-TabBar-content-container{-webkit-app-region:drag}
 body.plain-editor-ready #theia-main-content-panel .lm-TabBar-tab,body.plain-editor-ready #theia-main-content-panel .lm-TabBar-toolbar,body.plain-editor-ready #theia-main-content-panel .lm-TabBar-toolbar *,body.plain-editor-ready #theia-main-content-panel .theia-tabBar-open-tabs{-webkit-app-region:no-drag}
-body.plain-editor-ready #theia-main-content-panel .plain-window-tabs .theia-tabBar-tab-row{box-sizing:border-box;padding-right:var(--plain-window-space)}
+
 #plain-header{position:fixed;inset:40px auto 0 0;width:48px;height:auto;display:flex;flex-direction:column;gap:8px;align-items:center;padding:12px 2px 8px;border:0;-webkit-app-region:no-drag;user-select:none;overflow:visible}
 #plain-header .plain-rail-tools,#plain-header .plain-rail-footer{display:flex;flex-direction:column;align-items:center;gap:4px}
 #plain-header .plain-rail-tools{align-self:stretch;flex:1;min-height:0;margin:0 -2px;padding:0 2px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
@@ -172,7 +172,7 @@ body.plain-editor-ready #theia-main-content-panel .plain-window-tabs .theia-tabB
 #plain-titlebar[popover]{bottom:auto;width:auto;margin:0;padding:0;border:0;background:transparent;overflow:visible}
 #plain-titlebar::backdrop{display:none}
 #plain-titlebar .plain-window-controls{position:relative;z-index:1;transform:translateZ(0);display:flex;align-items:center;justify-content:center;flex:none;width:104px;height:40px;margin-left:auto;background:var(--theia-sideBar-background);pointer-events:auto;-webkit-app-region:no-drag}
-#plain-titlebar .plain-window-controls .plain-button{width:32px;height:30px;min-width:32px;padding:0;border-radius:6px}
+#plain-titlebar .plain-window-controls .plain-button{box-sizing:border-box;width:32px;height:30px;min-width:32px;padding:0;border-radius:6px}
 /* CSS glyphs keep native window controls painted when an extension takes focus. */
 #plain-titlebar .plain-window-controls svg{display:none}
 #plain-titlebar [data-plain-action='minimize']::before{content:'';width:12px;border-top:1px solid currentColor}
@@ -240,6 +240,7 @@ body.plain-focus-mode #plain-app-navigation{display:none!important}
 body.plain-focus-mode .plain-empty-titlebar{padding-left:12px}
 body.plain-focus-mode #plain-titlebar{top:0;left:0;right:0}
 body.plain-editor-ready #plain-titlebar.plain-compact-titlebar{left:auto;width:var(--plain-window-space)}
+body.plain-editor-ready #plain-titlebar.plain-inline-titlebar{position:static;inset:auto;flex:0 0 var(--plain-window-space);order:1000;align-self:center;box-sizing:border-box;transform:none}
 .plain-files-open{flex:none;width:28px;height:28px;padding:0}
 .plain-welcome{overflow:auto;background:var(--theia-editor-background);color:var(--theia-foreground);font:13px/1.5 var(--theia-ui-font-family)}
 .plain-welcome-content{box-sizing:border-box;max-width:760px;margin:0 auto;padding:clamp(32px,8vh,80px) clamp(24px,6vw,64px)}
@@ -572,6 +573,10 @@ body.plain-git-fullscreen-active :is(#plain-header,#plain-titlebar,#plain-app-na
 #plain-extension-settings .plain-extension-remove,#plain-extension-view-context .plain-extension-remove{color:var(--theia-errorForeground,#d32f2f)}
 #plain-extension-settings .plain-extension-remove{margin:0;border:1px solid currentColor;background:transparent}
 
+/* Thin section dividers share the theme's pane-border color. */
+.lm-TabBar-toolbar .plain-toolbar-separator{align-self:center;flex:none;width:1px;height:16px;margin:0 4px;background:var(--plain-divider-color,var(--theia-panel-border,#000));pointer-events:none}
+#plain-titlebar .plain-window-controls{box-sizing:border-box;padding:4px}
+#plain-titlebar.plain-inline-titlebar .plain-window-controls::before{content:"";position:absolute;left:0;top:12px;width:1px;height:16px;background:var(--plain-divider-color,var(--theia-panel-border,#000))}
 body.plain-editor-ready #theia-bottom-content-panel .lm-TabBar-toolbar{box-sizing:border-box;align-items:center;padding:4px 6px;gap:4px}
 body.plain-editor-ready #theia-bottom-content-panel .lm-TabBar-toolbar .item{margin:0 2px}
 body.plain-editor-ready #theia-bottom-content-panel .lm-TabBar-tab{margin:4px 2px;padding-inline:8px}

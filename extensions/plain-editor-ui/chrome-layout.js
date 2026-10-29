@@ -126,6 +126,19 @@ module.exports = function createChromeLayout({ shell, preferences, header, title
       const space = `${isTop ? Math.max(0, navigationRight - rect.left) : 0}px`;
       if (node.style.getPropertyValue('--plain-history-space') !== space) node.style.setProperty('--plain-history-space', space);
     }
+    const windowRow = rows.find(({ rect }) => Math.abs(rect.top - top) < 2 && Math.abs(rect.right - innerWidth) < 2)
+      ?.node.querySelector('.theia-tabBar-tab-row');
+    // Share the actual tab/action row so controls participate in its layout and
+    // stacking. Use the floating title bar only when there is no document row.
+    titlebar.classList.toggle('plain-inline-titlebar', Boolean(windowRow));
+    if (windowRow) {
+      if (titlebar.hasAttribute('popover')) { titlebar.hidePopover(); titlebar.removeAttribute('popover'); }
+      if (titlebar.parentElement !== windowRow) windowRow.append(titlebar);
+    } else {
+      if (titlebar.parentElement !== document.body) document.body.append(titlebar);
+      if (!titlebar.hasAttribute('popover')) titlebar.setAttribute('popover', 'manual');
+      if (!titlebar.matches(':popover-open')) titlebar.showPopover();
+    }
     titlebar.querySelector('.plain-empty-titlebar').hidden = rows.length > 0;
     titlebar.classList.toggle('plain-compact-titlebar', rows.length > 0);
   };

@@ -120,7 +120,7 @@ function buildOpenMenu() {
 function buildTitlebar() {
   const titlebar = document.createElement('div');
   titlebar.id = 'plain-titlebar';
-  // Keep window controls above independently composited editor/extension views.
+  // The empty-window title bar floats until it can join a document tab row.
   titlebar.setAttribute('popover', 'manual');
   titlebar.innerHTML = `<div class="plain-empty-titlebar">
     <span>Singularity</span><div class="plain-empty-actions">
@@ -209,6 +209,7 @@ module.exports = new ContainerModule((bind, unbind, isBound, rebind) => {
   require('./ssh-frontend')(bind);
   require('./git-tools')(bind);
   require('./pdf-export')(bind);
+  require('./toolbar-sections')(bind, rebind);
   require('./terminal-panel')(bind);
   bind(PreferenceContribution).toConstantValue({ schema: {
     type: 'object', properties: {

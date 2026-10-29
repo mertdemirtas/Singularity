@@ -29,6 +29,8 @@ The **Export PDF** button appears in the tab toolbar only for `.md`, `.markdown`
 
 On startup, Singularity restores your open tabs before showing the workspace. Closed tools stay closed; an empty session shows Welcome. Your last theme and font are used for the loading screen, and the selected font also applies to the terminal and extension UI.
 
+Toolbar buttons are grouped with thin separators. In narrow panes, secondary actions move into **More Actions** instead of being clipped.
+
 The terminal pane has **Minimize** (keeps sessions running) and **Close All** controls.
 
 Drag sidebar icons to reorder them. Right-click an icon to hide it, or right-click empty sidebar space to restore icons and reset the layout.
